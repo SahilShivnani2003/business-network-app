@@ -1,7 +1,7 @@
 import { ScrollView, View, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { Avatar } from '../components/ui/avatar';
-import { Badge } from '../components/ui/badge';
-import { Card } from '../components/ui/card';
+import { Avatar } from '../components/ui/Avatar';
+import { Badge } from '../components/ui/Badge';
+import { Card } from '../components/ui/Card';
 import { TrustScore } from '../components/ui/TrustScore';
 import { MOCK_MEMBERS } from '../data/mockData';
 import { Button } from '../components/ui/Button';

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, FlatList } from 'react-native';
 import { Colors, FontSize, BorderRadius, Shadow, Spacing } from '../../theme/colors';
-import { MemberCard, Badge, Button } from '../components';
 import { MOCK_MEMBERS } from '../../data/mockData';
+import { MemberCard } from '../../components/ui/MemberCard';
 
 type Props = { navigation: any };
 

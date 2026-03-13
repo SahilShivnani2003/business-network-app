@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
 import { Colors, FontSize, BorderRadius, Shadow } from '../../theme/colors';
-import { Avatar } from '../components';
 import { MOCK_MESSAGES } from '../../data/mockData';
+import { Avatar } from '../../components/ui/Avatar';
 
 type Props = { navigation: any };
 

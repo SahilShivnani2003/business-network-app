@@ -22,13 +22,17 @@ import {
     isOtp,
     minLength,
 } from '../../utils/validation';
+import { useAlert } from '../../context/AlertContext';
+import { useAuthStore } from '../../store/authStore';
+import { companyAPI } from '../../service/apis/companyService';
 
 type LoginProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
 type LoginMethod = 'otp' | 'email';
 
 const LoginScreen = ({ navigation }: LoginProps) => {
-    const [method, setMethod] = useState<LoginMethod>('otp');
-
+    const [method, setMethod] = useState<LoginMethod>('email');
+    const alert = useAlert();
+    const { login } = useAuthStore();
     // OTP flow
     const [phone, setPhone] = useState('');
     const [otp, setOtp] = useState('');
@@ -53,7 +57,11 @@ const LoginScreen = ({ navigation }: LoginProps) => {
     const handleSendOtp = () => {
         setPhoneTouched(true);
         if (phoneError) return;
-        setOtpSent(true);
+        alert.info('Comming Soon', 'OTP login comming soon');
+    };
+
+    const handleSocialLogin = () => {
+        alert.info('Comming Soon', 'Social login comming soon');
     };
 
     const handleVerifyOtp = () => {
@@ -63,11 +71,27 @@ const LoginScreen = ({ navigation }: LoginProps) => {
         navigation.replace('Main');
     };
 
-    const handleEmailLogin = () => {
+    const handleEmailLogin = async () => {
         setEmailTouched(true);
         setPasswordTouched(true);
         if (emailError || passError) return;
-        navigation.replace('Main');
+
+        try {
+            const data = {
+                email: email,
+                password: password,
+            };
+
+            const response = await companyAPI.login(data);
+
+            if (response.data?.success) {
+                alert.success('Login Successed', response.data?.message || 'Login successfully');
+                login(response?.data?.company, response.data?.token);
+                navigation.replace('Main');
+            }
+        } catch (error: any) {
+            alert.error('Login failed', error?.message || 'Something went wrong');
+        }
     };
 
     const handleSwitchMethod = (m: LoginMethod) => {
@@ -78,8 +102,6 @@ const LoginScreen = ({ navigation }: LoginProps) => {
         setEmailTouched(false);
         setPasswordTouched(false);
     };
-
-    
 
     return (
         <KeyboardAvoidingView
@@ -272,13 +294,13 @@ const LoginScreen = ({ navigation }: LoginProps) => {
                         label="Google"
                         icon="G"
                         color="#EA4335"
-                        onPress={() => navigation.replace('Main')}
+                        onPress={handleSocialLogin}
                     />
                     <SocialButton
                         label="LinkedIn"
                         icon="in"
                         color="#0A66C2"
-                        onPress={() => navigation.replace('Main')}
+                        onPress={handleSocialLogin}
                     />
                 </View>
 

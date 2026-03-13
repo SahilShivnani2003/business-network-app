@@ -2,7 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 
 // Auth screens
-import SplashScreen from '../screens/onboarding/SplashScreen';
+import SplashScreen from '../screens/onBoarding/SplashScreen';
 import OnboardingScreen from '../screens/onBoarding/OnboardingScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import SignupScreen from '../screens/auth/SignupScreen';

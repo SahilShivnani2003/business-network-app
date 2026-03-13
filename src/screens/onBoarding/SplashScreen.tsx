@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Colors, FontSize } from '../../theme/colors';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../../types';
+import { RootStackParamList } from '../../types/rootStackParamList';
 
 const { width, height } = Dimensions.get('window');
 

@@ -1,5 +1,5 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Card } from '../components/ui/card';
+import { Card } from '../components/ui/Card';
 import { BorderRadius, Colors, FontSize } from '../theme/colors';
 
 export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {

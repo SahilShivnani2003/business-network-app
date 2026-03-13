@@ -9,16 +9,17 @@ import ProfileScreen from '../screens/tabs/ProfileScreen';
 import { Colors } from '../theme/colors';
 import Iconions from 'react-native-vector-icons/Ionicons';
 import { MainTabParamList } from '../types/mainTabParamList';
+import ComingSoon from '../screens/CommingSoon';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const TAB_ICONS: Record<string, { active: string; inactive: string }> = {
     Home: { active: 'home', inactive: 'home-outline' },
-    Network: { active: 'account-group', inactive: 'account-group-outline' },
-    Leads: { active: 'target', inactive: 'target' },
+    Network: { active: 'people', inactive: 'people-outline' },
+    Leads: { active: 'flag', inactive: 'flag-outline' },
     Events: { active: 'calendar', inactive: 'calendar-outline' },
-    Messages: { active: 'message', inactive: 'message-outline' },
-    Profile: { active: 'account', inactive: 'account-outline' },
+    Messages: { active: 'chatbubble', inactive: 'chatbubble-outline' },
+    Profile: { active: 'person', inactive: 'person-outline' },
 };
 
 export const MainTabs = () => (
@@ -43,10 +44,10 @@ export const MainTabs = () => (
         })}
     >
         <Tab.Screen name="Home" component={HomeScreen} />
-        <Tab.Screen name="Network" component={NetworkScreen} />
+        <Tab.Screen name="Network" component={ComingSoon} />
         <Tab.Screen name="Leads" component={LeadsScreen} />
         <Tab.Screen name="Events" component={EventsScreen} />
-        <Tab.Screen name="Messages" component={MessagesScreen} />
+        <Tab.Screen name="Messages" component={ComingSoon} />
         <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
 );
