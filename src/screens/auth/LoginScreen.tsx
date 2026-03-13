@@ -79,6 +79,8 @@ const LoginScreen = ({ navigation }: LoginProps) => {
         setPasswordTouched(false);
     };
 
+    
+
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
