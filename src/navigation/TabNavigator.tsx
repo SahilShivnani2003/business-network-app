@@ -1,139 +1,86 @@
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Colors, Shadow, Radius } from "../theme/theme";
-import LinearGradient from "react-native-linear-gradient";
-import BlogScreen from "../screens/blogs";
-import ContactScreen from "../screens/contact";
-import EventsScreen from "../screens/evnet";
-import HomeScreen from "../screens/home";
-import MembersScreen from "../screens/member";
-import PlansScreen from "../screens/plans";
-import { NavigationContainer } from "@react-navigation/native";
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { View, Text, StyleSheet } from 'react-native';
+import EventsScreen from '../screens/tabs/EventsScreen';
+import HomeScreen from '../screens//tabs/HomeScreen';
+import LeadsScreen from '../screens/tabs/LeadsScreen';
+import MessagesScreen from '../screens/tabs/MessagesScreen';
+import NetworkScreen from '../screens/tabs/NetworkScreen';
+import ProfileScreen from '../screens/tabs/ProfileScreen';
+import { Colors } from '../theme/colors';
+import { MainTabParamList } from '../types';
+import Iconions from 'react-native-vector-icons/Ionicons';
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<MainTabParamList>();
 
-const TAB_CONFIG = [
-    { name: 'Home', icon: '🏠', label: 'Home' },
-    { name: 'Members', icon: '👥', label: 'Members' },
-    { name: 'Events', icon: '🎪', label: 'Events' },
-    { name: 'Plans', icon: '⭐', label: 'Plans' },
-    { name: 'Blog', icon: '📚', label: 'Blog' },
-    { name: 'Contact', icon: '💬', label: 'Support' },
-];
-
-const CustomTabBar = ({ state, descriptors, navigation }: any) => {
-    return (
-        <View style={styles.tabBar}>
-            <LinearGradient colors={['#FFFFFF', '#F8FAFF']} style={styles.tabBarGrad}>
-                {state.routes.map((route: any, index: any) => {
-                    const { options } = descriptors[route.key];
-                    const isFocused = state.index === index;
-                    const tab = TAB_CONFIG.find(t => t.name === route.name);
-
-                    const onPress = () => {
-                        const event = navigation.emit({
-                            type: 'tabPress',
-                            target: route.key,
-                            canPreventDefault: true,
-                        });
-                        if (!isFocused && !event.defaultPrevented) {
-                            navigation.navigate(route.name);
-                        }
-                    };
-
-                    return (
-                        <TouchableOpacity
-                            key={route.key}
-                            onPress={onPress}
-                            activeOpacity={0.7}
-                            style={styles.tabItem}
-                        >
-                            {isFocused ? (
-                                <LinearGradient
-                                    colors={[Colors.orange, Colors.orangeLight]}
-                                    style={styles.tabIconActive}
-                                >
-                                    <Text style={styles.tabIconText}>{tab?.icon}</Text>
-                                </LinearGradient>
-                            ) : (
-                                <View style={styles.tabIconInactive}>
-                                    <Text style={styles.tabIconText}>{tab?.icon}</Text>
-                                </View>
-                            )}
-                            <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
-                                {tab?.label}
-                            </Text>
-                        </TouchableOpacity>
-                    );
-                })}
-            </LinearGradient>
-        </View>
-    );
+const TAB_ICONS: Record<string, { active: string; inactive: string }> = {
+    Home: { active: 'home', inactive: 'home-outline' },
+    Network: { active: 'account-group', inactive: 'account-group-outline' },
+    Leads: { active: 'target', inactive: 'target' },
+    Events: { active: 'calendar', inactive: 'calendar-outline' },
+    Messages: { active: 'message', inactive: 'message-outline' },
+    Profile: { active: 'account', inactive: 'account-outline' },
 };
 
-export const MainTabs = () => (
-    <NavigationContainer>
-        <Tab.Navigator
-            tabBar={props => <CustomTabBar {...props} />}
-            screenOptions={{ headerShown: false }}
-        >
-            <Tab.Screen name="Home" component={HomeScreen} />
-            <Tab.Screen name="Members" component={MembersScreen} />
-            <Tab.Screen name="Events" component={EventsScreen} />
-            <Tab.Screen name="Plans" component={PlansScreen} />
-            <Tab.Screen name="Blog" component={BlogScreen} />
-            <Tab.Screen name="Contact" component={ContactScreen} />
-        </Tab.Navigator>
-    </NavigationContainer>
+export const MainTabs: React.FC = () => (
+    <Tab.Navigator
+        screenOptions={({ route }) => ({
+            headerShown: false,
+            tabBarStyle: styles.tabBar,
+            tabBarActiveTintColor: Colors.tabBarActive,
+            tabBarInactiveTintColor: Colors.tabBarInactive,
+            tabBarLabelStyle: styles.tabBarLabel,
+            tabBarIcon: ({ focused, color }) => {
+                const icon = focused
+                    ? TAB_ICONS[route.name].active
+                    : TAB_ICONS[route.name].inactive;
+
+                return (
+                    <View style={[styles.tabIconWrapper, focused && styles.tabIconActive]}>
+                        <Iconions name={icon} size={22} color={color} />
+                    </View>
+                );
+            },
+        })}
+    >
+        <Tab.Screen name="Home" component={HomeScreen} />
+        <Tab.Screen name="Network" component={NetworkScreen} />
+        <Tab.Screen name="Leads" component={LeadsScreen} />
+        <Tab.Screen name="Events" component={EventsScreen} />
+        <Tab.Screen name="Messages" component={MessagesScreen} />
+        <Tab.Screen name="Profile" component={ProfileScreen} />
+    </Tab.Navigator>
 );
 
 const styles = StyleSheet.create({
     tabBar: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        ...Shadow.dark,
-    },
-    tabBarGrad: {
-        flexDirection: 'row',
-        paddingVertical: 8,
-        paddingBottom: 20,
+        backgroundColor: Colors.tabBarBg,
         borderTopWidth: 1,
         borderTopColor: Colors.border,
-        paddingHorizontal: 4,
+        height: 72,
+        paddingBottom: 10,
+        paddingTop: 6,
+        elevation: 16,
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
     },
-    tabItem: {
-        flex: 1,
+    tabBarLabel: {
+        fontSize: 10,
+        fontWeight: '600',
+        marginTop: 2,
+    },
+    tabIconWrapper: {
+        width: 36,
+        height: 28,
         alignItems: 'center',
-        gap: 3,
-        paddingVertical: 4,
+        justifyContent: 'center',
+        borderRadius: 8,
     },
     tabIconActive: {
-        width: 38,
-        height: 38,
-        borderRadius: Radius.md,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...Shadow.orange,
+        backgroundColor: `${Colors.primary}15`,
     },
-    tabIconInactive: {
-        width: 38,
-        height: 38,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    tabIconText: {
-        fontSize: 18,
-    },
-    tabLabel: {
-        fontSize: 9,
-        color: Colors.gray,
-        fontWeight: '500',
-    },
-    tabLabelActive: {
-        color: Colors.orange,
-        fontWeight: '700',
+    tabIcon: {
+        fontSize: 20,
     },
 });
