@@ -1,7 +1,5 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { RootStackParamList } from '../types';
 
 // Auth screens
 import SplashScreen from '../screens/onboarding/SplashScreen';
@@ -17,10 +15,12 @@ import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { ReferralsScreen } from '../screens/ReferralsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { WhatsAppGroupsScreen } from '../screens/WhatsAppGroupsScreen';
+import { RootStackParamList } from '../types/rootStackParamList';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-const Stack = createStackNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
-export const AppNavigator: React.FC = () => (
+export default function AppNavigator() {
     <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Splash" component={SplashScreen} />
@@ -37,5 +37,5 @@ export const AppNavigator: React.FC = () => (
             <Stack.Screen name="CommunityHelp" component={CommunityHelpScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
         </Stack.Navigator>
-    </NavigationContainer>
-);
+    </NavigationContainer>;
+}

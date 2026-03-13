@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { Colors, FontSize, Spacing, BorderRadius, Shadow } from '../../theme/colors';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../../types/index';
 import { Button } from '../../components/ui/button';
+import { RootStackParamList } from '../../types/rootStackParamList';
 
 type Props = { navigation: StackNavigationProp<RootStackParamList, 'Signup'> };
 

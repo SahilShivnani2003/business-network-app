@@ -7,8 +7,8 @@ import MessagesScreen from '../screens/tabs/MessagesScreen';
 import NetworkScreen from '../screens/tabs/NetworkScreen';
 import ProfileScreen from '../screens/tabs/ProfileScreen';
 import { Colors } from '../theme/colors';
-import { MainTabParamList } from '../types';
 import Iconions from 'react-native-vector-icons/Ionicons';
+import { MainTabParamList } from '../types/mainTabParamList';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -21,7 +21,7 @@ const TAB_ICONS: Record<string, { active: string; inactive: string }> = {
     Profile: { active: 'account', inactive: 'account-outline' },
 };
 
-export const MainTabs: React.FC = () => (
+export const MainTabs = () => (
     <Tab.Navigator
         screenOptions={({ route }) => ({
             headerShown: false,
