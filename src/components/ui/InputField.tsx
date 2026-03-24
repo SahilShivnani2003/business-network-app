@@ -49,11 +49,11 @@ export const InputField = ({
     // ── Animated border on focus / blur ───────────────────────────────────────
     const onFocus = () => {
         setFocused(true);
-        Animated.spring(borderAnim, { toValue: 1, useNativeDriver: false, speed: 28 }).start();
+        Animated.spring(borderAnim, { toValue: 1, useNativeDriver: false, speed: 28, bounciness: 4 }).start();
     };
     const onBlur = () => {
         setFocused(false);
-        Animated.spring(borderAnim, { toValue: 0, useNativeDriver: false, speed: 28 }).start();
+        Animated.spring(borderAnim, { toValue: 0, useNativeDriver: false, speed: 28, bounciness: 4 }).start();
     };
 
     const animatedBorderColor = borderAnim.interpolate({
@@ -68,19 +68,24 @@ export const InputField = ({
     useEffect(() => {
         if (showError) {
             Animated.sequence([
-                Animated.timing(shakeAnim, { toValue: 7, duration: 55, useNativeDriver: true }),
+                Animated.timing(shakeAnim, { toValue: 7,  duration: 55, useNativeDriver: true }),
                 Animated.timing(shakeAnim, { toValue: -7, duration: 55, useNativeDriver: true }),
-                Animated.timing(shakeAnim, { toValue: 5, duration: 55, useNativeDriver: true }),
+                Animated.timing(shakeAnim, { toValue: 5,  duration: 55, useNativeDriver: true }),
                 Animated.timing(shakeAnim, { toValue: -5, duration: 55, useNativeDriver: true }),
-                Animated.timing(shakeAnim, { toValue: 0, duration: 55, useNativeDriver: true }),
+                Animated.timing(shakeAnim, { toValue: 0,  duration: 55, useNativeDriver: true }),
             ]).start();
         }
     }, [showError, error]);
 
-    const iconColor = focused ? Colors.primary : showError ? Colors.error : Colors.textMuted;
+    const iconColor = focused
+        ? Colors.primary
+        : showError
+        ? Colors.error
+        : Colors.textMuted;
 
     return (
         <Animated.View style={[styles.wrap, { transform: [{ translateX: shakeAnim }] }]}>
+
             {/* ── Label ── */}
             <Text style={[styles.label, showError && styles.labelError]}>
                 {label.toUpperCase()}
@@ -92,7 +97,6 @@ export const InputField = ({
                 style={[
                     styles.row,
                     { borderColor: animatedBorderColor },
-                    focused && styles.rowFocused,
                     showError && styles.rowError,
                 ]}
             >
@@ -136,7 +140,6 @@ export const InputField = ({
                         <Ionicons name={trailingIcon as any} size={18} color={Colors.textMuted} />
                     </TouchableOpacity>
                 ) : (
-                    /* Validation status icon when touched and no trailing icon */
                     touched &&
                     value.length > 0 && (
                         <Ionicons
@@ -151,7 +154,7 @@ export const InputField = ({
 
             {/* ── Error message ── */}
             {showError && (
-                <View style={styles.errorRow}>
+                <View style={styles.feedbackRow}>
                     <Ionicons name="alert-circle" size={12} color={Colors.error} />
                     <Text style={styles.errorText}>{error}</Text>
                 </View>
@@ -159,15 +162,12 @@ export const InputField = ({
 
             {/* ── Hint (only when no error) ── */}
             {hint && !showError && (
-                <View style={styles.hintRow}>
-                    <Ionicons
-                        name="information-circle-outline"
-                        size={12}
-                        color={Colors.textMuted}
-                    />
+                <View style={styles.feedbackRow}>
+                    <Ionicons name="information-circle-outline" size={12} color={Colors.textMuted} />
                     <Text style={styles.hintText}>{hint}</Text>
                 </View>
             )}
+
         </Animated.View>
     );
 };
@@ -176,48 +176,50 @@ const styles = StyleSheet.create({
     wrap: {
         marginBottom: Spacing.md,
     },
+
+    // ── Label ─────────────────────────────────────────────────────────────────
     label: {
-        fontSize: 11,
+        fontSize: FontSize.xs,           // 11
         fontWeight: '700',
-        color: Colors.textSecondary,
-        letterSpacing: 0.8,
-        textTransform: 'uppercase',
+        color: Colors.textSecondary,     // #5A6A85
+        letterSpacing: 0.9,
         marginBottom: 7,
     },
     labelError: {
-        color: Colors.error,
+        color: Colors.error,             // #DC2626
     },
     requiredStar: {
         color: Colors.error,
         fontWeight: '900',
     },
+
+    // ── Input row ─────────────────────────────────────────────────────────────
     row: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.surface,
-        borderRadius: BorderRadius.md,
+        backgroundColor: Colors.surface, // pure #FFFFFF
+        borderRadius: BorderRadius.md,   // 12
         borderWidth: 1.5,
-        borderColor: Colors.border,
+        borderColor: Colors.border,      // #E3EAF4 — animated, just the default
         height: 54,
         paddingHorizontal: Spacing.md,
-    },
-    rowFocused: {
-        backgroundColor: `${Colors.primary}08`,
-        // elevated shadow on focus
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.14,
-        shadowRadius: 8,
-        elevation: 4,
+        // single, clean drop-shadow (no glow / inner shadow)
+        shadowColor: Colors.shadow,      // rgba(21,101,192,0.12)
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 1,
+        shadowRadius: 4,
+        elevation: 2,
     },
     rowError: {
-        backgroundColor: `${Colors.error}06`,
+        backgroundColor: Colors.errorLight, // #FEE2E2 — very subtle red tint
     },
+
+    // ── Inner elements ────────────────────────────────────────────────────────
     leadingIcon: {
-        marginRight: Spacing.sm,
+        marginRight: Spacing.sm,         // 8
     },
     prefix: {
-        fontSize: FontSize.md,
+        fontSize: FontSize.md,           // 15
         color: Colors.textSecondary,
         fontWeight: '600',
         marginRight: 4,
@@ -230,8 +232,9 @@ const styles = StyleSheet.create({
     },
     input: {
         flex: 1,
-        fontSize: FontSize.md,
-        color: Colors.textPrimary,
+        fontSize: FontSize.md,           // 15
+        color: Colors.textPrimary,       // #0D1B3E
+        paddingVertical: 0,              // keeps text vertically centered on Android
     },
     trailingBtn: {
         padding: 4,
@@ -239,25 +242,21 @@ const styles = StyleSheet.create({
     statusIcon: {
         marginLeft: 4,
     },
-    errorRow: {
+
+    // ── Feedback row (error + hint share layout) ──────────────────────────────
+    feedbackRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
         marginTop: 5,
     },
     errorText: {
-        fontSize: 11,
+        fontSize: FontSize.xs,           // 11
         color: Colors.error,
         fontWeight: '600',
     },
-    hintRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        marginTop: 5,
-    },
     hintText: {
-        fontSize: 11,
-        color: Colors.textMuted,
+        fontSize: FontSize.xs,           // 11
+        color: Colors.textMuted,         // #9BA5B7
     },
 });

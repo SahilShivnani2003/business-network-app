@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     Text,
@@ -10,13 +10,13 @@ import {
     Platform,
     TextInput,
     Animated,
+    Dimensions,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Colors, FontSize, Spacing, BorderRadius, Shadow } from '../../theme/colors';
 import { Button } from '../../components/ui/Button';
 import { InputField } from '../../components/ui/InputField';
 import { RootStackParamList } from '../../types/rootStackParamList';
-import { StackNavigationProp } from '@react-navigation/stack';
 import {
     validate,
     required,
@@ -29,10 +29,10 @@ import { companyAPI } from '../../service/apis/companyService';
 import { useAlert } from '../../context/AlertContext';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuthStore } from '../../store/authStore';
-import axios from 'axios';
+
+const { width } = Dimensions.get('window');
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
 const CATEGORIES = [
     'Technology',
     'Healthcare',
@@ -58,12 +58,11 @@ const COMPANY_TYPES = [
 const EMPLOYEE_COUNTS = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'];
 
 const STEPS = [
-    { label: 'Contact & Authentication', subtitle: 'How can we reach you?' },
-    { label: 'Company Information', subtitle: 'Tell us about your company' },
-    { label: 'Address & Legal Details', subtitle: 'Company location and legal information' },
+    { label: 'Contact & Auth', subtitle: 'How can we reach you?', icon: '👤' },
+    { label: 'Company Info', subtitle: 'Tell us about your company', icon: '🏢' },
+    { label: 'Address & Legal', subtitle: 'Location and legal details', icon: '📋' },
 ];
 
-// ─── Step 1 form ──────────────────────────────────────────────────────────────
 interface Step1Form {
     email: string;
     password: string;
@@ -71,8 +70,6 @@ interface Step1Form {
     phone: string;
     website: string;
 }
-
-// ─── Step 2 form ──────────────────────────────────────────────────────────────
 interface Step2Form {
     companyName: string;
     category: string;
@@ -82,8 +79,6 @@ interface Step2Form {
     employeeCount: string;
     description: string;
 }
-
-// ─── Step 3 form ──────────────────────────────────────────────────────────────
 interface Step3Form {
     street: string;
     city: string;
@@ -96,13 +91,30 @@ interface Step3Form {
     msme: string;
 }
 
-type registerProps = NativeStackScreenProps<RootStackParamList, 'Signup'>;
-// ─── Main Screen ──────────────────────────────────────────────────────────────
-const SignupScreen = ({ navigation }: registerProps) => {
+type RegisterProps = NativeStackScreenProps<RootStackParamList, 'Signup'>;
+
+const SignupScreen = ({ navigation }: RegisterProps) => {
     const alert = useAlert();
     const { login } = useAuthStore();
     const [currentStep, setCurrentStep] = useState(0);
     const [showPassword, setShowPassword] = useState(false);
+    const [openPicker, setOpenPicker] = useState<string | null>(null);
+
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(30)).current;
+    const stepAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+            Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+        ]).start();
+    }, []);
+
+    const animateStep = () => {
+        stepAnim.setValue(0);
+        Animated.timing(stepAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
+    };
 
     // Step 1
     const [s1, setS1] = useState<Step1Form>({
@@ -139,7 +151,6 @@ const SignupScreen = ({ navigation }: registerProps) => {
         employeeCount: false,
         description: false,
     });
-    const [openPicker, setOpenPicker] = useState<string | null>(null);
 
     // Step 3
     const [s3, setS3] = useState<Step3Form>({
@@ -165,7 +176,6 @@ const SignupScreen = ({ navigation }: registerProps) => {
         msme: false,
     });
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
     const upS1 = (k: keyof Step1Form, v: string) => {
         setS1(p => ({ ...p, [k]: v }));
         setS1Touched(p => ({ ...p, [k]: false }));
@@ -179,7 +189,6 @@ const SignupScreen = ({ navigation }: registerProps) => {
         setS3Touched(p => ({ ...p, [k]: false }));
     };
 
-    // ── Validation ────────────────────────────────────────────────────────────
     const s1Errors = {
         email: validate(s1.email, [required(), isEmail()]),
         password: validate(s1.password, [required(), isStrongPassword()]),
@@ -260,7 +269,17 @@ const SignupScreen = ({ navigation }: registerProps) => {
             touchAllS2();
             if (!s2Valid) return;
         }
+        animateStep();
         setCurrentStep(p => p + 1);
+    };
+
+    const handleBack = () => {
+        if (currentStep === 0) {
+            navigation.goBack();
+            return;
+        }
+        animateStep();
+        setCurrentStep(p => p - 1);
     };
 
     const handleSubmit = async () => {
@@ -284,117 +303,150 @@ const SignupScreen = ({ navigation }: registerProps) => {
                 serviceOffered: '',
                 socialLinks: '',
             };
-
-            debugger
             const response = await companyAPI.register(data);
-
             if (response.data?.success) {
-                alert.success('Register Successfull', 'Your Register successfully.');
+                alert.success('Registration Successful', 'Your company is registered.');
                 login(response.data?.company, response.data?.token);
                 navigation.replace('Main');
             }
         } catch (error: any) {
-            alert.error('Registration failed', error?.message || 'Something went wrong');
+            alert.error('Registration Failed', error?.message || 'Something went wrong');
         }
     };
+
+    const stepSlide = stepAnim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] });
+    const stepOpacity = stepAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
 
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={{ flex: 1 }}
         >
+            <StatusBar barStyle="light-content" backgroundColor={Colors.primaryDark} />
+
+            {/* Header */}
+            <View style={styles.headerBg}>
+                <View style={styles.circle1} />
+                <View style={styles.circle2} />
+                <View style={styles.circle3} />
+
+                <Animated.View
+                    style={[
+                        styles.headerContent,
+                        { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+                    ]}
+                >
+                    {/* Back button */}
+                    <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
+                        <Ionicons name="arrow-back" size={18} color="rgba(255,255,255,0.85)" />
+                        <Text style={styles.backText}>Back</Text>
+                    </TouchableOpacity>
+
+                    {/* Logo */}
+                    <View style={styles.logoRow}>
+                        <View style={styles.logoIconBox}>
+                            <Text style={styles.logoIconText}>i</Text>
+                        </View>
+                        <View>
+                            <Text style={styles.logoWordmark}>iNEXT</Text>
+                            <View style={styles.etsBadge}>
+                                <Text style={styles.etsText}>E·T·S</Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    <Text style={styles.welcomeTitle}>Create Account</Text>
+                    <Text style={styles.welcomeSub}>Join India's business network</Text>
+                </Animated.View>
+            </View>
+
             <ScrollView
-                style={styles.container}
-                contentContainerStyle={styles.content}
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
-                <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
+                {/* Step Indicator */}
+                <Animated.View style={{ opacity: fadeAnim }}>
+                    <StepIndicator current={currentStep} steps={STEPS} />
+                </Animated.View>
 
-                {/* ── Back ── */}
-                <View style={styles.header}>
-                    <TouchableOpacity
-                        style={styles.backBtn}
-                        onPress={() =>
-                            currentStep === 0 ? navigation.goBack() : setCurrentStep(p => p - 1)
-                        }
-                    >
-                        <Ionicons name="arrow-back" size={20} color={Colors.primary} />
-                        <Text style={styles.backText}>Back</Text>
-                    </TouchableOpacity>
-                </View>
+                {/* Step label card */}
+                <Animated.View
+                    style={[
+                        styles.stepLabelCard,
+                        {
+                            opacity: stepAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0.6, 1],
+                            }),
+                        },
+                    ]}
+                >
+                    <View style={styles.stepIconBadge}>
+                        <Text style={styles.stepIconText}>{STEPS[currentStep].icon}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.stepTitle}>{STEPS[currentStep].label}</Text>
+                        <Text style={styles.stepSubtitle}>{STEPS[currentStep].subtitle}</Text>
+                    </View>
+                    <Text style={styles.stepCounter}>{currentStep + 1}/3</Text>
+                </Animated.View>
 
-                {/* ── Stepper ── */}
-                <StepIndicator current={currentStep} total={3} />
-
-                {/* ── Card ── */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>{STEPS[currentStep].label}</Text>
-                    <Text style={styles.cardSubtitle}>{STEPS[currentStep].subtitle}</Text>
-
-                    {/* ══════════ STEP 1 ══════════ */}
+                {/* Form Card */}
+                <Animated.View
+                    style={[
+                        styles.card,
+                        { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+                    ]}
+                >
+                    {/* STEP 1 */}
                     {currentStep === 0 && (
                         <View style={styles.formSection}>
-                            <View style={styles.row2}>
-                                <View style={styles.col}>
-                                    <InputField
-                                        label="Email Address"
-                                        icon="mail-outline"
-                                        value={s1.email}
-                                        onChangeText={v => upS1('email', v)}
-                                        placeholder="test@company.com"
-                                        keyboardType="email-address"
-                                        required
-                                        error={s1Errors.email}
-                                        touched={s1Touched.email}
-                                    />
-                                </View>
-                                <View style={styles.col}>
-                                    <InputField
-                                        label="Password"
-                                        icon="lock-closed-outline"
-                                        value={s1.password}
-                                        onChangeText={v => upS1('password', v)}
-                                        placeholder="••••••••••"
-                                        secureTextEntry={!showPassword}
-                                        trailingIcon={
-                                            showPassword ? 'eye-off-outline' : 'eye-outline'
-                                        }
-                                        onTrailingPress={() => setShowPassword(p => !p)}
-                                        required
-                                        error={s1Errors.password}
-                                        touched={s1Touched.password}
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.row2}>
-                                <View style={styles.col}>
-                                    <InputField
-                                        label="Contact Person Name"
-                                        icon="person-outline"
-                                        value={s1.contactName}
-                                        onChangeText={v => upS1('contactName', v)}
-                                        placeholder="John Doe"
-                                        autoCapitalize="words"
-                                    />
-                                </View>
-                                <View style={styles.col}>
-                                    <InputField
-                                        label="Phone Number"
-                                        icon="call-outline"
-                                        value={s1.phone}
-                                        onChangeText={v => upS1('phone', v)}
-                                        placeholder="9876543210"
-                                        keyboardType="phone-pad"
-                                        maxLength={10}
-                                        required
-                                        error={s1Errors.phone}
-                                        touched={s1Touched.phone}
-                                    />
-                                </View>
-                            </View>
-
+                            <InputField
+                                label="Email Address"
+                                icon="mail-outline"
+                                value={s1.email}
+                                onChangeText={v => upS1('email', v)}
+                                placeholder="you@company.com"
+                                keyboardType="email-address"
+                                required
+                                error={s1Errors.email}
+                                touched={s1Touched.email}
+                            />
+                            <InputField
+                                label="Password"
+                                icon="lock-closed-outline"
+                                value={s1.password}
+                                onChangeText={v => upS1('password', v)}
+                                placeholder="Minimum 8 characters"
+                                secureTextEntry={!showPassword}
+                                trailingIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                                onTrailingPress={() => setShowPassword(p => !p)}
+                                required
+                                error={s1Errors.password}
+                                touched={s1Touched.password}
+                            />
+                            <InputField
+                                label="Contact Person Name"
+                                icon="person-outline"
+                                value={s1.contactName}
+                                onChangeText={v => upS1('contactName', v)}
+                                placeholder="Full name"
+                                autoCapitalize="words"
+                            />
+                            <InputField
+                                label="Phone Number"
+                                icon="call-outline"
+                                value={s1.phone}
+                                onChangeText={v => upS1('phone', v)}
+                                placeholder="9876543210"
+                                keyboardType="phone-pad"
+                                maxLength={10}
+                                required
+                                error={s1Errors.phone}
+                                touched={s1Touched.phone}
+                            />
                             <InputField
                                 label="Website"
                                 icon="globe-outline"
@@ -406,259 +458,201 @@ const SignupScreen = ({ navigation }: registerProps) => {
                         </View>
                     )}
 
-                    {/* ══════════ STEP 2 ══════════ */}
+                    {/* STEP 2 */}
                     {currentStep === 1 && (
                         <View style={styles.formSection}>
-                            <View style={styles.row2}>
-                                <View style={styles.col}>
-                                    <InputField
-                                        label="Company Name"
-                                        icon="business-outline"
-                                        value={s2.companyName}
-                                        onChangeText={v => upS2('companyName', v)}
-                                        placeholder="Enter company name"
-                                        autoCapitalize="words"
-                                        required
-                                        error={s2Errors.companyName}
-                                        touched={s2Touched.companyName}
-                                    />
-                                </View>
-                                <View style={styles.col}>
-                                    <DropdownField
-                                        label="Category"
-                                        value={s2.category}
-                                        placeholder="Select Category"
-                                        options={CATEGORIES}
-                                        isOpen={openPicker === 'category'}
-                                        onToggle={() =>
-                                            setOpenPicker(p =>
-                                                p === 'category' ? null : 'category',
-                                            )
-                                        }
-                                        onSelect={v => {
-                                            upS2('category', v);
-                                            setOpenPicker(null);
-                                        }}
-                                        required
-                                        error={s2Errors.category}
-                                        touched={s2Touched.category}
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.row2}>
-                                <View style={styles.col}>
-                                    <DropdownField
-                                        label="Company Type"
-                                        value={s2.companyType}
-                                        placeholder="Select Company Type"
-                                        options={COMPANY_TYPES}
-                                        isOpen={openPicker === 'companyType'}
-                                        onToggle={() =>
-                                            setOpenPicker(p =>
-                                                p === 'companyType' ? null : 'companyType',
-                                            )
-                                        }
-                                        onSelect={v => {
-                                            upS2('companyType', v);
-                                            setOpenPicker(null);
-                                        }}
-                                    />
-                                </View>
-                                <View style={styles.col}>
-                                    <InputField
-                                        label="Industry"
-                                        icon="layers-outline"
-                                        value={s2.industry}
-                                        onChangeText={v => upS2('industry', v)}
-                                        placeholder="e.g., Software Development"
-                                        autoCapitalize="words"
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.row2}>
-                                <View style={styles.col}>
-                                    <InputField
-                                        label="Year Established"
-                                        icon="calendar-outline"
-                                        value={s2.yearEstablished}
-                                        onChangeText={v => upS2('yearEstablished', v)}
-                                        placeholder="2020"
-                                        keyboardType="number-pad"
-                                        maxLength={4}
-                                    />
-                                </View>
-                                <View style={styles.col}>
-                                    <DropdownField
-                                        label="Employee Count"
-                                        value={s2.employeeCount}
-                                        placeholder="Select Employee Count"
-                                        options={EMPLOYEE_COUNTS}
-                                        isOpen={openPicker === 'employeeCount'}
-                                        onToggle={() =>
-                                            setOpenPicker(p =>
-                                                p === 'employeeCount' ? null : 'employeeCount',
-                                            )
-                                        }
-                                        onSelect={v => {
-                                            upS2('employeeCount', v);
-                                            setOpenPicker(null);
-                                        }}
-                                    />
-                                </View>
-                            </View>
-
-                            {/* Description textarea */}
-                            <Text style={styles.textareaLabel}>BUSINESS DESCRIPTION</Text>
-                            <TextInput
-                                style={styles.textarea}
-                                value={s2.description}
-                                onChangeText={v => upS2('description', v)}
-                                placeholder="Describe your business, products, and services..."
-                                placeholderTextColor={Colors.textMuted}
-                                multiline
-                                numberOfLines={5}
-                                textAlignVertical="top"
+                            <InputField
+                                label="Company Name"
+                                icon="business-outline"
+                                value={s2.companyName}
+                                onChangeText={v => upS2('companyName', v)}
+                                placeholder="Acme Corp"
+                                autoCapitalize="words"
+                                required
+                                error={s2Errors.companyName}
+                                touched={s2Touched.companyName}
                             />
+                            <DropdownField
+                                label="Category"
+                                value={s2.category}
+                                placeholder="Select Category"
+                                options={CATEGORIES}
+                                isOpen={openPicker === 'category'}
+                                onToggle={() =>
+                                    setOpenPicker(p => (p === 'category' ? null : 'category'))
+                                }
+                                onSelect={v => {
+                                    upS2('category', v);
+                                    setOpenPicker(null);
+                                }}
+                                required
+                                error={s2Errors.category}
+                                touched={s2Touched.category}
+                            />
+                            <DropdownField
+                                label="Company Type"
+                                value={s2.companyType}
+                                placeholder="Select Company Type"
+                                options={COMPANY_TYPES}
+                                isOpen={openPicker === 'companyType'}
+                                onToggle={() =>
+                                    setOpenPicker(p => (p === 'companyType' ? null : 'companyType'))
+                                }
+                                onSelect={v => {
+                                    upS2('companyType', v);
+                                    setOpenPicker(null);
+                                }}
+                            />
+                            <InputField
+                                label="Industry"
+                                icon="layers-outline"
+                                value={s2.industry}
+                                onChangeText={v => upS2('industry', v)}
+                                placeholder="e.g. Software Development"
+                                autoCapitalize="words"
+                            />
+                            <InputField
+                                label="Year Established"
+                                icon="calendar-outline"
+                                value={s2.yearEstablished}
+                                onChangeText={v => upS2('yearEstablished', v)}
+                                placeholder="2020"
+                                keyboardType="number-pad"
+                                maxLength={4}
+                            />
+                            <DropdownField
+                                label="Employee Count"
+                                value={s2.employeeCount}
+                                placeholder="Select Employee Range"
+                                options={EMPLOYEE_COUNTS}
+                                isOpen={openPicker === 'employeeCount'}
+                                onToggle={() =>
+                                    setOpenPicker(p =>
+                                        p === 'employeeCount' ? null : 'employeeCount',
+                                    )
+                                }
+                                onSelect={v => {
+                                    upS2('employeeCount', v);
+                                    setOpenPicker(null);
+                                }}
+                            />
+                            <View style={styles.textareaWrapper}>
+                                <Text style={styles.textareaLabel}>BUSINESS DESCRIPTION</Text>
+                                <TextInput
+                                    style={styles.textarea}
+                                    value={s2.description}
+                                    onChangeText={v => upS2('description', v)}
+                                    placeholder="Describe your business, products, and services..."
+                                    placeholderTextColor={Colors.textMuted}
+                                    multiline
+                                    numberOfLines={4}
+                                    textAlignVertical="top"
+                                />
+                            </View>
                         </View>
                     )}
 
-                    {/* ══════════ STEP 3 ══════════ */}
+                    {/* STEP 3 */}
                     {currentStep === 2 && (
                         <View style={styles.formSection}>
-                            <Text style={styles.sectionHeading}>Company Address</Text>
-
+                            <SectionHeader label="Company Address" icon="location-outline" />
                             <InputField
                                 label="Street Address"
                                 icon="location-outline"
                                 value={s3.street}
                                 onChangeText={v => upS3('street', v)}
-                                placeholder="Enter full address"
+                                placeholder="Enter full street address"
                                 autoCapitalize="sentences"
                                 required
                                 error={s3Errors.street}
                                 touched={s3Touched.street}
                             />
-
-                            <View style={styles.row2}>
-                                <View style={styles.col}>
-                                    <InputField
-                                        label="City"
-                                        value={s3.city}
-                                        onChangeText={v => upS3('city', v)}
-                                        placeholder="Mumbai"
-                                        autoCapitalize="words"
-                                        required
-                                        error={s3Errors.city}
-                                        touched={s3Touched.city}
-                                    />
-                                </View>
-                                <View style={styles.col}>
-                                    <InputField
-                                        label="State"
-                                        value={s3.state}
-                                        onChangeText={v => upS3('state', v)}
-                                        placeholder="Maharashtra"
-                                        autoCapitalize="words"
-                                        required
-                                        error={s3Errors.state}
-                                        touched={s3Touched.state}
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.row2}>
-                                <View style={styles.col}>
-                                    <InputField
-                                        label="Country"
-                                        value={s3.country}
-                                        onChangeText={v => upS3('country', v)}
-                                        placeholder="India"
-                                        autoCapitalize="words"
-                                        required
-                                        error={s3Errors.country}
-                                        touched={s3Touched.country}
-                                    />
-                                </View>
-                                <View style={styles.col}>
-                                    <InputField
-                                        label="Pincode"
-                                        value={s3.pincode}
-                                        onChangeText={v => upS3('pincode', v)}
-                                        placeholder="400001"
-                                        keyboardType="number-pad"
-                                        maxLength={6}
-                                        required
-                                        error={s3Errors.pincode}
-                                        touched={s3Touched.pincode}
-                                    />
-                                </View>
-                            </View>
-
-                            <Text style={[styles.sectionHeading, { marginTop: Spacing.lg }]}>
-                                Legal Details
-                            </Text>
-
-                            <View style={styles.row2}>
-                                <View style={styles.col}>
-                                    <InputField
-                                        label="GST Number"
-                                        value={s3.gst}
-                                        onChangeText={v => upS3('gst', v.toUpperCase())}
-                                        placeholder="22AAAAA0000A1Z5"
-                                        autoCapitalize="characters"
-                                        maxLength={15}
-                                        hint="Optional"
-                                    />
-                                </View>
-                                <View style={styles.col}>
-                                    <InputField
-                                        label="PAN Number"
-                                        value={s3.pan}
-                                        onChangeText={v => upS3('pan', v.toUpperCase())}
-                                        placeholder="AAAAA0000A"
-                                        autoCapitalize="characters"
-                                        maxLength={10}
-                                        hint="Optional"
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.row2}>
-                                <View style={styles.col}>
-                                    <InputField
-                                        label="CIN Number"
-                                        value={s3.cin}
-                                        onChangeText={v => upS3('cin', v.toUpperCase())}
-                                        placeholder="L17110DL1995PLC069348"
-                                        autoCapitalize="characters"
-                                        hint="Optional"
-                                    />
-                                </View>
-                                <View style={styles.col}>
-                                    <InputField
-                                        label="MSME Number"
-                                        value={s3.msme}
-                                        onChangeText={v => upS3('msme', v.toUpperCase())}
-                                        placeholder="UDYAM-XX-00-0000000"
-                                        autoCapitalize="characters"
-                                        hint="Optional"
-                                    />
-                                </View>
-                            </View>
+                            <InputField
+                                label="City"
+                                value={s3.city}
+                                onChangeText={v => upS3('city', v)}
+                                placeholder="Mumbai"
+                                autoCapitalize="words"
+                                required
+                                error={s3Errors.city}
+                                touched={s3Touched.city}
+                            />
+                            <InputField
+                                label="State"
+                                value={s3.state}
+                                onChangeText={v => upS3('state', v)}
+                                placeholder="Maharashtra"
+                                autoCapitalize="words"
+                                required
+                                error={s3Errors.state}
+                                touched={s3Touched.state}
+                            />
+                            <InputField
+                                label="Country"
+                                value={s3.country}
+                                onChangeText={v => upS3('country', v)}
+                                placeholder="India"
+                                autoCapitalize="words"
+                                required
+                                error={s3Errors.country}
+                                touched={s3Touched.country}
+                            />
+                            <InputField
+                                label="Pincode"
+                                value={s3.pincode}
+                                onChangeText={v => upS3('pincode', v)}
+                                placeholder="400001"
+                                keyboardType="number-pad"
+                                maxLength={6}
+                                required
+                                error={s3Errors.pincode}
+                                touched={s3Touched.pincode}
+                            />
+                            <SectionHeader label="Legal Details" icon="shield-checkmark-outline" />
+                            <InputField
+                                label="GST Number"
+                                value={s3.gst}
+                                onChangeText={v => upS3('gst', v.toUpperCase())}
+                                placeholder="22AAAAA0000A1Z5"
+                                autoCapitalize="characters"
+                                maxLength={15}
+                                hint="Optional"
+                            />
+                            <InputField
+                                label="PAN Number"
+                                value={s3.pan}
+                                onChangeText={v => upS3('pan', v.toUpperCase())}
+                                placeholder="AAAAA0000A"
+                                autoCapitalize="characters"
+                                maxLength={10}
+                                hint="Optional"
+                            />
+                            <InputField
+                                label="CIN Number"
+                                value={s3.cin}
+                                onChangeText={v => upS3('cin', v.toUpperCase())}
+                                placeholder="L17110DL1995PLC069348"
+                                autoCapitalize="characters"
+                                hint="Optional"
+                            />
+                            <InputField
+                                label="MSME Number"
+                                value={s3.msme}
+                                onChangeText={v => upS3('msme', v.toUpperCase())}
+                                placeholder="UDYAM-XX-00-0000000"
+                                autoCapitalize="characters"
+                                hint="Optional"
+                            />
                         </View>
                     )}
 
-                    {/* ── Navigation buttons ── */}
+                    {/* Navigation */}
                     <View style={styles.navRow}>
-                        <TouchableOpacity
-                            style={styles.prevBtn}
-                            onPress={() =>
-                                currentStep === 0 ? navigation.goBack() : setCurrentStep(p => p - 1)
-                            }
-                        >
-                            <Text style={styles.prevBtnText}>Previous</Text>
+                        <TouchableOpacity style={styles.prevBtn} onPress={handleBack}>
+                            <Ionicons name="arrow-back" size={16} color={Colors.textSecondary} />
+                            <Text style={styles.prevBtnText}>
+                                {currentStep === 0 ? 'Login' : 'Back'}
+                            </Text>
                         </TouchableOpacity>
 
                         {currentStep < 2 ? (
@@ -679,13 +673,13 @@ const SignupScreen = ({ navigation }: registerProps) => {
                             />
                         )}
                     </View>
-                </View>
+                </Animated.View>
 
-                {/* Register link */}
-                <View style={styles.loginRow}>
-                    <Text style={styles.loginPrompt}>Already have an account? </Text>
+                {/* Footer */}
+                <View style={styles.footer}>
+                    <Text style={styles.footerPrompt}>Already have an account? </Text>
                     <TouchableOpacity onPress={() => navigation.replace('Login')}>
-                        <Text style={styles.loginLink}>Login →</Text>
+                        <Text style={styles.footerLink}>Login →</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -693,33 +687,123 @@ const SignupScreen = ({ navigation }: registerProps) => {
     );
 };
 
+// ─── Section Header ────────────────────────────────────────────────────────────
+const SectionHeader: React.FC<{ label: string; icon: string }> = ({ label, icon }) => (
+    <View style={secStyles.wrap}>
+        <View style={secStyles.iconBox}>
+            <Ionicons name={icon as any} size={14} color={Colors.primary} />
+        </View>
+        <Text style={secStyles.label}>{label}</Text>
+        <View style={secStyles.line} />
+    </View>
+);
+const secStyles = StyleSheet.create({
+    wrap: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: Spacing.md,
+        marginTop: Spacing.sm,
+    },
+    iconBox: {
+        width: 26,
+        height: 26,
+        borderRadius: 8,
+        backgroundColor: `${Colors.primary}14`,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    label: {
+        fontSize: FontSize.sm,
+        fontWeight: '800',
+        color: Colors.textPrimary,
+        letterSpacing: 0.3,
+    },
+    line: { flex: 1, height: 1, backgroundColor: Colors.border },
+});
+
 // ─── Step Indicator ───────────────────────────────────────────────────────────
-const StepIndicator: React.FC<{ current: number; total: number }> = ({ current, total }) => (
-    <View style={styles.stepperWrap}>
-        {Array.from({ length: total }).map((_, i) => (
+const StepIndicator: React.FC<{ current: number; steps: typeof STEPS }> = ({ current, steps }) => (
+    <View style={stepStyles.wrap}>
+        {steps.map((s, i) => (
             <React.Fragment key={i}>
-                <View
-                    style={[
-                        styles.stepCircle,
-                        i < current && styles.stepDone,
-                        i === current && styles.stepActive,
-                    ]}
-                >
-                    {i < current ? (
-                        <Ionicons name="checkmark" size={14} color={Colors.white} />
-                    ) : (
-                        <Text style={[styles.stepNum, i === current && styles.stepNumActive]}>
-                            {i + 1}
-                        </Text>
-                    )}
+                <View style={stepStyles.stepCol}>
+                    <View
+                        style={[
+                            stepStyles.circle,
+                            i < current && stepStyles.done,
+                            i === current && stepStyles.active,
+                        ]}
+                    >
+                        {i < current ? (
+                            <Ionicons name="checkmark" size={14} color={Colors.white} />
+                        ) : (
+                            <Text style={[stepStyles.num, i === current && stepStyles.numActive]}>
+                                {i + 1}
+                            </Text>
+                        )}
+                    </View>
+                    <Text
+                        style={[stepStyles.stepLabel, i === current && stepStyles.stepLabelActive]}
+                        numberOfLines={1}
+                    >
+                        {s.label}
+                    </Text>
                 </View>
-                {i < total - 1 && (
-                    <View style={[styles.stepLine, i < current && styles.stepLineDone]} />
+                {i < steps.length - 1 && (
+                    <View style={[stepStyles.line, i < current && stepStyles.lineDone]} />
                 )}
             </React.Fragment>
         ))}
     </View>
 );
+const stepStyles = StyleSheet.create({
+    wrap: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        marginBottom: Spacing.md,
+        paddingHorizontal: 4,
+    },
+    stepCol: { alignItems: 'center', gap: 5, width: 72 },
+    circle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        borderWidth: 2,
+        borderColor: Colors.border,
+        backgroundColor: Colors.surface,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    active: {
+        borderColor: Colors.primary,
+        backgroundColor: Colors.primary,
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    done: { borderColor: Colors.primary, backgroundColor: Colors.primary },
+    num: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.textMuted },
+    numActive: { color: Colors.white },
+    stepLabel: {
+        fontSize: 9,
+        fontWeight: '600',
+        color: Colors.textMuted,
+        textAlign: 'center',
+        letterSpacing: 0.2,
+    },
+    stepLabelActive: { color: Colors.primary, fontWeight: '800' },
+    line: {
+        flex: 1,
+        height: 2,
+        backgroundColor: Colors.border,
+        marginTop: 17,
+        marginHorizontal: 2,
+    },
+    lineDone: { backgroundColor: Colors.primary },
+});
 
 // ─── Dropdown Field ───────────────────────────────────────────────────────────
 interface DropdownFieldProps {
@@ -734,7 +818,6 @@ interface DropdownFieldProps {
     error?: string;
     touched?: boolean;
 }
-
 const DropdownField: React.FC<DropdownFieldProps> = ({
     label,
     value,
@@ -813,75 +896,143 @@ const DropdownField: React.FC<DropdownFieldProps> = ({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.background },
-    content: { paddingHorizontal: 16, paddingBottom: 48 },
+    headerBg: {
+        backgroundColor: Colors.primaryDark,
+        paddingTop: 52,
+        paddingBottom: 48,
+        paddingHorizontal: 28,
+        overflow: 'hidden',
+        position: 'relative',
+    },
+    circle1: {
+        position: 'absolute',
+        width: 200,
+        height: 200,
+        borderRadius: 100,
+        backgroundColor: Colors.primaryLight,
+        opacity: 0.15,
+        top: -60,
+        right: -60,
+    },
+    circle2: {
+        position: 'absolute',
+        width: 130,
+        height: 130,
+        borderRadius: 65,
+        backgroundColor: Colors.accent,
+        opacity: 0.12,
+        bottom: -30,
+        left: -30,
+    },
+    circle3: {
+        position: 'absolute',
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: Colors.accentLight,
+        opacity: 0.1,
+        top: 28,
+        left: width / 2,
+    },
+    headerContent: { zIndex: 10 },
 
-    header: { paddingTop: 52, paddingBottom: 8 },
-    backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
-    backText: { color: Colors.primary, fontSize: FontSize.md, fontWeight: '600' },
-
-    // Stepper
-    stepperWrap: {
+    backBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginVertical: Spacing.lg,
-        paddingHorizontal: Spacing.md,
+        gap: 6,
+        alignSelf: 'flex-start',
+        marginBottom: 20,
+        paddingVertical: 4,
     },
-    stepCircle: {
+    backText: { color: 'rgba(255,255,255,0.85)', fontSize: FontSize.sm, fontWeight: '600' },
+
+    logoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
+    logoIconBox: {
+        width: 44,
+        height: 44,
+        borderRadius: 13,
+        backgroundColor: Colors.accent,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...Shadow.button,
+    },
+    logoIconText: {
+        fontSize: 24,
+        fontWeight: '900',
+        color: Colors.white,
+        fontStyle: 'italic',
+        lineHeight: 28,
+    },
+    logoWordmark: { fontSize: 19, fontWeight: '900', color: Colors.white, letterSpacing: 3 },
+    etsBadge: {
+        backgroundColor: 'rgba(255,255,255,0.18)',
+        borderRadius: 4,
+        paddingHorizontal: 6,
+        paddingVertical: 1,
+        alignSelf: 'flex-start',
+        marginTop: 2,
+    },
+    etsText: { color: Colors.white, fontSize: 9, fontWeight: '800', letterSpacing: 3 },
+    welcomeTitle: {
+        fontSize: 28,
+        fontWeight: '900',
+        color: Colors.white,
+        letterSpacing: -0.5,
+        marginBottom: 4,
+    },
+    welcomeSub: { fontSize: FontSize.sm, color: 'rgba(255,255,255,0.65)', fontWeight: '500' },
+
+    scrollView: {
+        flex: 1,
+        backgroundColor: Colors.background,
+        marginTop: -20,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+    },
+    scrollContent: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 48 },
+
+    stepLabelCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        backgroundColor: Colors.surface,
+        borderRadius: BorderRadius.lg,
+        padding: 14,
+        marginBottom: 14,
+        borderLeftWidth: 3,
+        borderLeftColor: Colors.accent,
+        ...Shadow.card,
+    },
+    stepIconBadge: {
         width: 36,
         height: 36,
-        borderRadius: 18,
-        borderWidth: 2,
-        borderColor: Colors.border,
-        backgroundColor: Colors.surface,
+        borderRadius: 10,
+        backgroundColor: `${Colors.accent}18`,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    stepActive: { borderColor: Colors.primary, backgroundColor: Colors.primary },
-    stepDone: { borderColor: Colors.primary, backgroundColor: Colors.primary },
-    stepNum: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.textMuted },
-    stepNumActive: { color: Colors.white },
-    stepLine: { flex: 1, height: 3, backgroundColor: Colors.border, marginHorizontal: 4 },
-    stepLineDone: { backgroundColor: Colors.primary },
+    stepIconText: { fontSize: 18 },
+    stepTitle: { fontSize: FontSize.md, fontWeight: '800', color: Colors.textPrimary },
+    stepSubtitle: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 1 },
+    stepCounter: { fontSize: FontSize.lg, fontWeight: '900', color: Colors.accent, opacity: 0.6 },
 
-    // Card
     card: {
         backgroundColor: Colors.surface,
         borderRadius: BorderRadius.xl,
         padding: Spacing.lg,
         ...Shadow.card,
     },
-    cardTitle: {
-        fontSize: FontSize.xxl,
-        fontWeight: '900',
-        color: Colors.textPrimary,
-        textAlign: 'center',
-        marginBottom: 4,
-    },
-    cardSubtitle: {
-        fontSize: FontSize.sm,
-        color: Colors.textSecondary,
-        textAlign: 'center',
-        marginBottom: Spacing.lg,
-    },
+    formSection: { gap: 18 },
+    row2: { flexDirection: 'row', gap: 14 },
+    col: { flex: 1, minWidth: 0 },
 
-    formSection: { gap: 0 },
-    sectionHeading: {
-        fontSize: FontSize.md,
-        fontWeight: '800',
-        color: Colors.textPrimary,
-        marginBottom: Spacing.md,
-    },
-
-    row2: { flexDirection: 'row', gap: 12 },
-    col: { flex: 1 },
-
+    textareaWrapper: {},
     textareaLabel: {
         fontSize: 11,
         fontWeight: '700',
         color: Colors.textSecondary,
         letterSpacing: 0.8,
-        marginBottom: 7,
+        marginBottom: 8,
     },
     textarea: {
         backgroundColor: Colors.background,
@@ -889,32 +1040,36 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
         borderColor: Colors.border,
         paddingHorizontal: Spacing.md,
-        paddingVertical: 12,
+        paddingVertical: 14,
         fontSize: FontSize.md,
         color: Colors.textPrimary,
         minHeight: 110,
-        marginBottom: Spacing.md,
+        lineHeight: 22,
     },
 
     navRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: Spacing.lg,
+        marginTop: 22,
+        gap: 12,
     },
     prevBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
         borderWidth: 1.5,
         borderColor: Colors.border,
         borderRadius: BorderRadius.md,
         paddingVertical: 13,
-        paddingHorizontal: 24,
+        paddingHorizontal: 18,
     },
     prevBtnText: { fontSize: FontSize.md, color: Colors.textSecondary, fontWeight: '600' },
-    nextBtn: { flex: 1, marginLeft: 12 },
+    nextBtn: { flex: 1 },
 
-    loginRow: { flexDirection: 'row', justifyContent: 'center', marginTop: Spacing.lg },
-    loginPrompt: { fontSize: FontSize.md, color: Colors.textSecondary },
-    loginLink: { fontSize: FontSize.md, color: Colors.primary, fontWeight: '700' },
+    footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 24 },
+    footerPrompt: { fontSize: FontSize.md, color: Colors.textSecondary },
+    footerLink: { fontSize: FontSize.md, color: Colors.accent, fontWeight: '800' },
 });
 
 const dropStyles = StyleSheet.create({
@@ -932,11 +1087,11 @@ const dropStyles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: Colors.surface,
+        backgroundColor: Colors.background,
         borderRadius: BorderRadius.md,
         borderWidth: 1.5,
         borderColor: Colors.border,
-        height: 54,
+        height: 52,
         paddingHorizontal: Spacing.md,
     },
     triggerOpen: { borderColor: Colors.primary, backgroundColor: `${Colors.primary}08` },
@@ -959,7 +1114,7 @@ const dropStyles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing.md,
-        paddingVertical: 12,
+        paddingVertical: 11,
         borderBottomWidth: 1,
         borderBottomColor: Colors.border,
     },
