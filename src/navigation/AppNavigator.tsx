@@ -19,6 +19,7 @@ import { RootStackParamList } from '../types/rootStackParamList';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AlertProvider } from '../context/AlertContext';
 import { useColorScheme } from 'react-native';
+import CommunityChatScreen from '../screens/CommunityChatScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -46,6 +47,7 @@ export default function AppNavigator() {
                     <Stack.Screen name="Referrals" component={ReferralsScreen} />
                     <Stack.Screen name="CommunityHelp" component={CommunityHelpScreen} />
                     <Stack.Screen name="Settings" component={SettingsScreen} />
+                    <Stack.Screen name="CommunityChatScreen" component={CommunityChatScreen} />
                 </Stack.Navigator>
             </NavigationContainer>
         </AlertProvider>

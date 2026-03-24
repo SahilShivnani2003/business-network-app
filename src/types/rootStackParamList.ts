@@ -14,4 +14,10 @@ export type RootStackParamList = {
     Referrals: undefined;
     WhatsAppGroups: undefined;
     CommunityHelp: undefined;
+    CommunityChatScreen: {
+        communityId: any;
+        communityName: any;
+        memberCount: any;
+        type: any;
+    };
 };

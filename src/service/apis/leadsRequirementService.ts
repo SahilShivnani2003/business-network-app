@@ -1,6 +1,6 @@
 import { privateClient, publicClient } from "../apiClient";
 
-export const leadsRequirementService = {
+export const leadRequirementAPI = {
     getAllActive: (params?: any) => publicClient.get('/lead-requirements/active', { params }),
 
     //Private Endpoints 

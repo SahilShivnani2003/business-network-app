@@ -3,6 +3,6 @@ export type MainTabParamList = {
     Network: undefined;
     Leads: undefined;
     Events: undefined;
-    Messages: undefined;
+    Community: undefined;
     Profile: undefined;
 };
