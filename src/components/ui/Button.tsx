@@ -1,5 +1,6 @@
 import { StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
 import { Colors, FontSize, BorderRadius } from '../../theme/colors';
+import { Loader } from './Loader';
 
 interface ButtonProps {
     label: string;
@@ -9,6 +10,7 @@ interface ButtonProps {
     fullWidth?: boolean;
     disabled?: boolean;
     style?: ViewStyle;
+    loading?: boolean;
 }
 export const Button: React.FC<ButtonProps> = ({
     label,
@@ -18,6 +20,7 @@ export const Button: React.FC<ButtonProps> = ({
     fullWidth = false,
     disabled = false,
     style,
+    loading,
 }) => {
     const variantStyles: Record<string, { container: ViewStyle; text: TextStyle }> = {
         primary: { container: { backgroundColor: Colors.primary }, text: { color: Colors.white } },
@@ -55,9 +58,13 @@ export const Button: React.FC<ButtonProps> = ({
             disabled={disabled}
             activeOpacity={0.8}
         >
-            <Text style={[styles.btnText, size === 'lg' && { fontSize: FontSize.md }, text]}>
-                {label}
-            </Text>
+            {loading ? (
+                <Loader variant="button" />
+            ) : (
+                <Text style={[styles.btnText, size === 'lg' && { fontSize: FontSize.md }, text]}>
+                    {label}
+                </Text>
+            )}
         </TouchableOpacity>
     );
 };

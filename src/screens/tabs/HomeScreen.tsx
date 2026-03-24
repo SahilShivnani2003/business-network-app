@@ -14,11 +14,10 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Colors, FontSize, Spacing, BorderRadius, Shadow } from '../../theme/colors';
 import { Avatar } from '../../components/ui/Avatar';
-import { Button } from '../../components/ui/Button';
 import { dashboardAPI } from '../../service/apis/dashboardService';
+import { useAuthStore } from '../../store/authStore';
 
 const { width } = Dimensions.get('window');
-const CARD_W = (width - 48 - 12) / 2;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,7 +36,6 @@ interface RecentCompany {
     verificationStatus: 'verified' | 'pending' | 'rejected';
     createdAt: string;
 }
-
 interface DashboardStats {
     totalUsers: number;
     newUsersToday: number;
@@ -64,7 +62,6 @@ interface DashboardStats {
     activeSessions: number;
     issues: number;
 }
-
 interface DashboardUsers {
     users: RecentUser[];
     totalUsers: number;
@@ -73,56 +70,36 @@ interface DashboardUsers {
     hasNextPage: boolean;
     hasPrevPage: boolean;
 }
-
 type Props = { navigation: any };
 
-// ─── Quick actions ────────────────────────────────────────────────────────────
+// ─── Data ─────────────────────────────────────────────────────────────────────
 
 const QUICK = [
-    {
-        label: 'Find Clients',
-        icon: 'search',
-        color: Colors.primary,
-        bg: `${Colors.primary}14`,
-        screen: 'Network',
-    },
-    {
-        label: 'Post Help',
-        icon: 'megaphone',
-        color: Colors.accent,
-        bg: `${Colors.accent}14`,
-        screen: 'CommunityHelp',
-    },
-    {
-        label: 'Join Group',
-        icon: 'chatbubbles',
-        color: Colors.success,
-        bg: `${Colors.success}14`,
-        screen: 'WhatsAppGroups',
-    },
-    {
-        label: 'Events',
-        icon: 'calendar',
-        color: Colors.premium,
-        bg: `${Colors.premium}14`,
-        screen: 'Events',
-    },
+    { label: 'Find\nClients', icon: 'search', color: Colors.primary, screen: 'Network' },
+    { label: 'Post\nHelp', icon: 'megaphone', color: Colors.accent, screen: 'CommunityHelp' },
+    { label: 'Join\nGroup', icon: 'chatbubbles', color: Colors.success, screen: 'WhatsAppGroups' },
+    { label: 'Upcoming\nEvents', icon: 'calendar', color: Colors.premium, screen: 'Events' },
 ] as const;
 
 const greeting = () => {
     const h = new Date().getHours();
-    return h < 12 ? 'Good Morning ☀️' : h < 17 ? 'Good Afternoon 🌤' : 'Good Evening 🌙';
+    return h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
+};
+const greetingEmoji = () => {
+    const h = new Date().getHours();
+    return h < 12 ? '☀️' : h < 17 ? '🌤️' : '🌙';
 };
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 const HomeScreen: React.FC<Props> = ({ navigation }) => {
+    const { company } = useAuthStore();
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [users, setUsers] = useState<DashboardUsers | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(24)).current;
+    const riseAnim = useRef(new Animated.Value(30)).current;
 
     const fetchData = useCallback(async (isRefresh = false) => {
         try {
@@ -139,8 +116,13 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             setLoading(false);
             setRefreshing(false);
             Animated.parallel([
-                Animated.timing(fadeAnim, { toValue: 1, duration: 480, useNativeDriver: true }),
-                Animated.timing(slideAnim, { toValue: 0, duration: 420, useNativeDriver: true }),
+                Animated.timing(fadeAnim, { toValue: 1, duration: 560, useNativeDriver: true }),
+                Animated.spring(riseAnim, {
+                    toValue: 0,
+                    friction: 9,
+                    tension: 60,
+                    useNativeDriver: true,
+                }),
             ]).start();
         }
     }, []);
@@ -152,8 +134,9 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
     if (loading) {
         return (
             <View style={styles.loader}>
-                <ActivityIndicator size="large" color={Colors.primary} />
-                <Text style={styles.loaderText}>Loading dashboard…</Text>
+                <View style={styles.loaderDot} />
+                <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 24 }} />
+                <Text style={styles.loaderLabel}>Fetching your dashboard</Text>
             </View>
         );
     }
@@ -167,247 +150,272 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                     refreshing={refreshing}
                     onRefresh={() => fetchData(true)}
                     colors={[Colors.primary]}
-                    tintColor={Colors.primary}
+                    tintColor={Colors.white}
                 />
             }
         >
-            <StatusBar barStyle="light-content" backgroundColor={Colors.primaryDark} />
-
-            {/* ═══════════════════════════════════════
-                HERO
-            ═══════════════════════════════════════ */}
+            {/* ═══════════════════════════════
+                HERO — dark navy canvas
+            ═══════════════════════════════ */}
             <View style={styles.hero}>
-                {/* Top bar */}
-                <View style={styles.heroBar}>
+                {/* Decorative circles */}
+                <View style={[styles.dec, styles.dec1]} />
+                <View style={[styles.dec, styles.dec2]} />
+                <View style={[styles.dec, styles.dec3]} />
+
+                {/* Nav */}
+                <View style={styles.nav}>
                     <View>
-                        <Text style={styles.greetingText}>{greeting()}</Text>
-                        <Text style={styles.heroTitle}>iNEXT Dashboard</Text>
+                        <Text style={styles.navGreeting}>
+                            {greeting()} {greetingEmoji()}
+                        </Text>
+                        <Text style={styles.navTitle}>{company.companyName}</Text>
                     </View>
-                    <View style={styles.heroBarRight}>
+                    <View style={styles.navRight}>
                         <TouchableOpacity
-                            style={styles.iconBtn}
+                            style={styles.navBtn}
                             onPress={() => navigation.navigate('Notifications')}
                         >
-                            <Ionicons name="notifications-outline" size={22} color={Colors.white} />
+                            <Ionicons name="notifications-outline" size={20} color={Colors.white} />
                             {(stats?.issues ?? 0) > 0 && (
-                                <View style={styles.badge}>
-                                    <Text style={styles.badgeText}>{stats!.issues}</Text>
+                                <View style={styles.navBadge}>
+                                    <Text style={styles.navBadgeText}>{stats!.issues}</Text>
                                 </View>
                             )}
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-                            <View style={styles.avatarRing}>
-                                <Avatar name="User" size={36} />
-                            </View>
+                        <TouchableOpacity
+                            style={styles.navAvatar}
+                            onPress={() => navigation.navigate('Profile')}
+                        >
+                            <Avatar name={company.companyName} size={36} />
                         </TouchableOpacity>
                     </View>
                 </View>
 
-                {/* Sessions pill */}
+                {/* Live pill */}
                 {stats && (
-                    <View style={styles.sessionPill}>
-                        <View style={styles.pulse} />
-                        <Text style={styles.sessionLabel}>
-                            {stats.activeSessions} active sessions
-                        </Text>
+                    <View style={styles.livePill}>
+                        <View style={styles.liveBlip} />
+                        <Text style={styles.liveText}>{stats.activeSessions} live sessions</Text>
                     </View>
                 )}
 
-                {/* ── 4 hero stat cards ── */}
-                <Animated.View
-                    style={[
-                        styles.heroCards,
-                        { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-                    ]}
-                >
-                    <HeroStat
-                        label="Active Leads"
-                        value={stats?.activeLeads ?? 0}
-                        icon="trending-up"
-                        color={Colors.accent}
-                    />
-                    <HeroStat
+                {/* Big number */}
+                <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: riseAnim }] }}>
+                    <Text style={styles.heroEyebrow}>Active Leads</Text>
+                    <Text style={styles.heroNumber}>{stats?.activeLeads ?? '—'}</Text>
+                    <Text style={styles.heroSub}>
+                        {stats?.leadsThisMonth ?? 0} new this month · {stats?.totalLeads ?? 0} total
+                    </Text>
+                </Animated.View>
+
+                {/* 3-stat strip */}
+                <Animated.View style={[styles.heroStrip, { opacity: fadeAnim }]}>
+                    <HeroChip
                         label="Companies"
-                        value={stats?.verifiedCompanies ?? 0}
-                        icon="business"
-                        color={Colors.white}
+                        value={stats?.totalCompanies ?? 0}
+                        tint={Colors.primaryLight}
                     />
-                    <HeroStat
+                    <View style={styles.heroStripDiv} />
+                    <HeroChip
                         label="Events"
                         value={stats?.upcomingEvents ?? 0}
-                        icon="calendar"
-                        color={Colors.success}
+                        tint={Colors.accent}
                     />
-                    <HeroStat
+                    <View style={styles.heroStripDiv} />
+                    <HeroChip
                         label="Members"
                         value={stats?.regularUsers ?? 0}
-                        icon="people"
-                        color={Colors.premium}
+                        tint={Colors.premium}
                     />
                 </Animated.View>
             </View>
 
-            {/* ═══════════════════════════════════════
+            {/* ═══════════════════════════════
+                FLOAT ROW — overlaps hero
+            ═══════════════════════════════ */}
+            <Animated.View
+                style={[
+                    styles.floatRow,
+                    { opacity: fadeAnim, transform: [{ translateY: riseAnim }] },
+                ]}
+            >
+                <FloatStat
+                    icon="person-add-outline"
+                    label="New Today"
+                    value={stats?.newUsersToday ?? 0}
+                    color={Colors.success}
+                />
+                <FloatStat
+                    icon="checkmark-circle-outline"
+                    label="Verified"
+                    value={stats?.verifiedCompanies ?? 0}
+                    color={Colors.primary}
+                />
+                <FloatStat
+                    icon="time-outline"
+                    label="Pending"
+                    value={stats?.pendingCompanies ?? 0}
+                    color={Colors.warning}
+                />
+                <FloatStat
+                    icon="flash-outline"
+                    label="This Month"
+                    value={stats?.usersThisMonth ?? 0}
+                    color={Colors.accent}
+                />
+            </Animated.View>
+
+            {/* ═══════════════════════════════
                 BODY
-            ═══════════════════════════════════════ */}
+            ═══════════════════════════════ */}
             <Animated.View style={[styles.body, { opacity: fadeAnim }]}>
-                {/* ── Secondary strip ── */}
-                {stats && (
-                    <View style={styles.secStrip}>
-                        <SecItem
-                            icon="person-add-outline"
-                            label="New Today"
-                            value={stats.newUsersToday}
-                            color={Colors.success}
-                        />
-                        <View style={styles.stripDiv} />
-                        <SecItem
-                            icon="checkmark-circle-outline"
-                            label="Verified"
-                            value={stats.verifiedCompanies}
-                            color={Colors.primary}
-                        />
-                        <View style={styles.stripDiv} />
-                        <SecItem
-                            icon="time-outline"
-                            label="Pending"
-                            value={stats.pendingCompanies}
-                            color={Colors.warning}
-                        />
-                        <View style={styles.stripDiv} />
-                        <SecItem
-                            icon="flash-outline"
-                            label="This Month"
-                            value={stats.usersThisMonth}
-                            color={Colors.accent}
-                        />
-                    </View>
-                )}
-
                 {/* ── Quick Actions ── */}
-                <Section title="Quick Actions">
-                    <View style={styles.quickGrid}>
-                        {QUICK.map(a => (
-                            <TouchableOpacity
-                                key={a.label}
-                                style={[styles.quickTile, { backgroundColor: a.bg }]}
-                                onPress={() => navigation.navigate(a.screen)}
-                                activeOpacity={0.78}
+                <Label text="Quick Actions" />
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.quickScroll}
+                >
+                    {QUICK.map(a => (
+                        <TouchableOpacity
+                            key={a.screen}
+                            style={styles.quickCard}
+                            onPress={() => navigation.navigate(a.screen)}
+                            activeOpacity={0.78}
+                        >
+                            <View
+                                style={[styles.quickIconWrap, { backgroundColor: `${a.color}15` }]}
                             >
-                                <View
-                                    style={[
-                                        styles.quickCircle,
-                                        { backgroundColor: `${a.color}22` },
-                                    ]}
-                                >
-                                    <Ionicons name={a.icon as any} size={24} color={a.color} />
-                                </View>
-                                <Text style={[styles.quickLabel, { color: a.color }]}>
-                                    {a.label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </Section>
-
-                {/* ── Leads Banner ── */}
-                {stats && (
-                    <View style={styles.leadsBanner}>
-                        <View style={styles.leadsBannerLeft}>
-                            <View style={styles.leadsBadge}>
-                                <Ionicons name="flash" size={11} color={Colors.accent} />
-                                <Text style={styles.leadsBadgeText}>ACTIVE LEADS</Text>
+                                <Ionicons name={a.icon as any} size={26} color={a.color} />
                             </View>
-                            <Text style={styles.leadsBannerNum}>{stats.activeLeads}</Text>
-                            <Text style={styles.leadsBannerLabel}>leads this month</Text>
-                            <Text style={styles.leadsBannerSub}>
-                                {stats.leadsThisMonth} new added recently
-                            </Text>
-                            <TouchableOpacity
-                                style={styles.leadsBtn}
-                                onPress={() => navigation.navigate('Leads')}
-                            >
-                                <Text style={styles.leadsBtnText}>View Leads</Text>
-                                <Ionicons name="arrow-forward" size={14} color={Colors.white} />
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.leadsBannerRight}>
-                            <Ionicons name="trending-up" size={64} color={`${Colors.accent}30`} />
+                            <Text style={styles.quickCardLabel}>{a.label}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+
+                {/* ── Leads Card ── */}
+                {stats && (
+                    <View style={styles.leadsCard}>
+                        <View style={[styles.leadsAccentBar, { backgroundColor: Colors.accent }]} />
+                        <View style={styles.leadsInner}>
+                            <View style={styles.leadsTop}>
+                                <View style={{ flex: 1 }}>
+                                    <View style={styles.leadsTag}>
+                                        <Ionicons name="flash" size={9} color={Colors.accent} />
+                                        <Text style={styles.leadsTagText}>LEADS PIPELINE</Text>
+                                    </View>
+                                    <Text style={styles.leadsNum}>{stats.activeLeads}</Text>
+                                    <Text style={styles.leadsDesc}>
+                                        active · {stats.leadsThisMonth} added this month
+                                    </Text>
+                                </View>
+                                <View style={styles.leadsCircle}>
+                                    <Ionicons name="trending-up" size={28} color={Colors.accent} />
+                                </View>
+                            </View>
+                            <View style={styles.leadsFooter}>
+                                <View style={styles.leadsFooterStat}>
+                                    <Text style={styles.leadsFooterVal}>
+                                        {stats.activeRequirements}
+                                    </Text>
+                                    <Text style={styles.leadsFooterLabel}>Active Requirements</Text>
+                                </View>
+                                <View style={styles.leadsFooterDivider} />
+                                <View style={styles.leadsFooterStat}>
+                                    <Text style={styles.leadsFooterVal}>
+                                        {stats.requirementsThisMonth}
+                                    </Text>
+                                    <Text style={styles.leadsFooterLabel}>New This Month</Text>
+                                </View>
+                                <TouchableOpacity
+                                    style={styles.leadsBtn}
+                                    onPress={() => navigation.navigate('Leads')}
+                                >
+                                    <Text style={styles.leadsBtnText}>View</Text>
+                                    <Ionicons name="arrow-forward" size={12} color={Colors.white} />
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
                 )}
 
                 {/* ── Recent Members ── */}
                 {(users?.users?.length ?? 0) > 0 && (
-                    <Section
-                        title="Recent Members"
-                        actionLabel="View All"
-                        onAction={() => navigation.navigate('Network')}
-                    >
+                    <View>
+                        <RowHeader
+                            title="Recent Members"
+                            action="See All"
+                            onAction={() => navigation.navigate('Network')}
+                        />
                         <ScrollView
                             horizontal
                             showsHorizontalScrollIndicator={false}
                             contentContainerStyle={{ paddingRight: 4 }}
                         >
                             {users!.users.map(u => (
-                                <MemberPill key={u._id} user={u} />
+                                <MemberCard key={u._id} user={u} />
                             ))}
                         </ScrollView>
-                    </Section>
+                    </View>
                 )}
 
                 {/* ── Recent Companies ── */}
                 {(stats?.recentCompanies?.length ?? 0) > 0 && (
-                    <Section
-                        title="Recent Companies"
-                        actionLabel="View All"
-                        onAction={() => navigation.navigate('Network')}
-                    >
-                        {stats!.recentCompanies.map((c, i) => (
-                            <CompanyRow
-                                key={c._id}
-                                company={c}
-                                isLast={i === stats!.recentCompanies.length - 1}
-                            />
-                        ))}
-                    </Section>
+                    <View>
+                        <RowHeader
+                            title="Recent Companies"
+                            action="See All"
+                            onAction={() => navigation.navigate('Network')}
+                        />
+                        <View style={styles.companiesCard}>
+                            {stats!.recentCompanies.map((c, i) => (
+                                <CompanyRow
+                                    key={c._id}
+                                    company={c}
+                                    isLast={i === stats!.recentCompanies.length - 1}
+                                />
+                            ))}
+                        </View>
+                    </View>
                 )}
 
                 {/* ── Platform Overview ── */}
                 {stats && (
-                    <Section title="Platform Overview">
+                    <View>
+                        <RowHeader title="Platform Overview" />
                         <View style={styles.overGrid}>
-                            <OverTile
+                            <OverCard
                                 icon="people"
-                                label="Total Users"
+                                label="Users"
                                 value={stats.totalUsers}
                                 color={Colors.primary}
                             />
-                            <OverTile
+                            <OverCard
                                 icon="business"
                                 label="Companies"
                                 value={stats.totalCompanies}
                                 color={Colors.accent}
                             />
-                            <OverTile
+                            <OverCard
                                 icon="star"
                                 label="Subscriptions"
                                 value={stats.totalSubscriptions}
                                 color={Colors.premium}
                             />
-                            <OverTile
+                            <OverCard
                                 icon="calendar"
                                 label="Events"
                                 value={stats.totalEvents}
                                 color={Colors.success}
                             />
-                            <OverTile
+                            <OverCard
                                 icon="cube"
                                 label="Requirements"
                                 value={stats.totalRequirements}
                                 color={Colors.warning}
                             />
-                            <OverTile
+                            <OverCard
                                 icon="cash"
                                 label="Revenue"
                                 value={`₹${stats.monthlyRevenue}`}
@@ -415,30 +423,31 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                                 isStr
                             />
                         </View>
-                    </Section>
+                    </View>
                 )}
 
                 {/* ── Community ── */}
                 <TouchableOpacity
-                    style={styles.community}
+                    style={styles.communityCard}
                     onPress={() => navigation.navigate('CommunityHelp')}
-                    activeOpacity={0.85}
+                    activeOpacity={0.82}
                 >
-                    <View style={styles.communityIcon}>
-                        <Ionicons name="earth" size={26} color={Colors.primary} />
+                    <View style={styles.communityLeft}>
+                        <Text style={styles.communityEye}>COMMUNITY</Text>
+                        <Text style={styles.communityTitle}>Help Board</Text>
+                        <Text style={styles.communitySub}>Post needs · Get answers</Text>
                     </View>
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.communityTitle}>Community Help Board</Text>
-                        <Text style={styles.communitySub}>
-                            Post your business needs · Get community support
-                        </Text>
-                    </View>
-                    <View style={styles.communityArrow}>
-                        <Ionicons name="chevron-forward" size={18} color={Colors.primary} />
+                    <View>
+                        <View style={styles.communityGlobe}>
+                            <Ionicons name="earth" size={44} color={`${Colors.white}20`} />
+                        </View>
+                        <View style={styles.communityArrowBtn}>
+                            <Ionicons name="arrow-forward" size={16} color={Colors.white} />
+                        </View>
                     </View>
                 </TouchableOpacity>
 
-                <View style={{ height: 100 }} />
+                <View style={{ height: 110 }} />
             </Animated.View>
         </ScrollView>
     );
@@ -446,150 +455,131 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-/** Hero stat — inside blue header */
-const HeroStat: React.FC<{ label: string; value: number; icon: string; color: string }> = ({
+const HeroChip: React.FC<{ label: string; value: number; tint: string }> = ({
     label,
     value,
-    icon,
-    color,
+    tint,
 }) => (
-    <View style={hStyles.wrap}>
-        <View style={[hStyles.iconBox, { backgroundColor: `${color}25` }]}>
-            <Ionicons name={icon as any} size={18} color={color} />
-        </View>
-        <Text style={hStyles.value}>{value}</Text>
-        <Text style={hStyles.label}>{label}</Text>
+    <View style={heroChipS.wrap}>
+        <Text style={[heroChipS.val, { color: tint }]}>{value}</Text>
+        <Text style={heroChipS.label}>{label}</Text>
     </View>
 );
+const heroChipS = StyleSheet.create({
+    wrap: { flex: 1, alignItems: 'center', gap: 3 },
+    val: { fontSize: FontSize.xl, fontWeight: '900', letterSpacing: -0.5 },
+    label: { fontSize: FontSize.xs, color: `${Colors.white}60`, fontWeight: '600' },
+});
 
-const hStyles = StyleSheet.create({
-    wrap: {
-        flex: 1,
-        alignItems: 'center',
-        backgroundColor: `${Colors.white}12`,
-        borderRadius: BorderRadius.lg,
-        paddingVertical: 14,
-        marginHorizontal: 4,
-    },
-    iconBox: {
+const FloatStat: React.FC<{ icon: string; label: string; value: number; color: string }> = ({
+    icon,
+    label,
+    value,
+    color,
+}) => (
+    <View style={floatStatS.wrap}>
+        <View style={[floatStatS.icon, { backgroundColor: `${color}12` }]}>
+            <Ionicons name={icon as any} size={16} color={color} />
+        </View>
+        <Text style={[floatStatS.val, { color }]}>{value}</Text>
+        <Text style={floatStatS.label}>{label}</Text>
+    </View>
+);
+const floatStatS = StyleSheet.create({
+    wrap: { flex: 1, alignItems: 'center', gap: 5 },
+    icon: {
         width: 36,
         height: 36,
-        borderRadius: 10,
+        borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 8,
     },
-    value: { fontSize: FontSize.xxl, fontWeight: '900', color: Colors.white, lineHeight: 28 },
-    label: {
-        fontSize: 10,
-        color: `${Colors.white}80`,
-        fontWeight: '600',
-        marginTop: 3,
-        textAlign: 'center',
+    val: { fontSize: FontSize.lg, fontWeight: '900' },
+    label: { fontSize: 10, color: Colors.textMuted, fontWeight: '600', textAlign: 'center' },
+});
+
+const Label: React.FC<{ text: string }> = ({ text }) => <Text style={labelS.text}>{text}</Text>;
+const labelS = StyleSheet.create({
+    text: {
+        fontSize: FontSize.md,
+        fontWeight: '800',
+        color: Colors.textPrimary,
+        letterSpacing: -0.3,
+        marginBottom: Spacing.sm,
     },
 });
 
-/** Secondary strip item */
-const SecItem: React.FC<{ icon: string; label: string; value: number; color: string }> = ({
-    icon,
-    label,
-    value,
-    color,
+const RowHeader: React.FC<{ title: string; action?: string; onAction?: () => void }> = ({
+    title,
+    action,
+    onAction,
 }) => (
-    <View style={secStyles.wrap}>
-        <View style={[secStyles.iconCircle, { backgroundColor: `${color}14` }]}>
-            <Ionicons name={icon as any} size={14} color={color} />
-        </View>
-        <Text style={[secStyles.value, { color }]}>{value}</Text>
-        <Text style={secStyles.label}>{label}</Text>
+    <View style={rowHeaderS.row}>
+        <Text style={rowHeaderS.title}>{title}</Text>
+        {action && (
+            <TouchableOpacity style={rowHeaderS.btn} onPress={onAction}>
+                <Text style={rowHeaderS.btnText}>{action}</Text>
+                <Ionicons name="chevron-forward" size={11} color={Colors.primary} />
+            </TouchableOpacity>
+        )}
     </View>
 );
-
-const secStyles = StyleSheet.create({
-    wrap: { flex: 1, alignItems: 'center', gap: 4 },
-    iconCircle: {
-        width: 30,
-        height: 30,
-        borderRadius: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    value: { fontSize: FontSize.lg, fontWeight: '900' },
-    label: { fontSize: 10, color: Colors.textMuted, fontWeight: '600' },
-});
-
-/** Reusable section wrapper */
-const Section: React.FC<{
-    title: string;
-    actionLabel?: string;
-    onAction?: () => void;
-    children: React.ReactNode;
-}> = ({ title, actionLabel, onAction, children }) => (
-    <View style={secWrapStyles.wrap}>
-        <View style={secWrapStyles.header}>
-            <Text style={secWrapStyles.title}>{title}</Text>
-            {actionLabel && (
-                <TouchableOpacity onPress={onAction}>
-                    <Text style={secWrapStyles.action}>{actionLabel}</Text>
-                </TouchableOpacity>
-            )}
-        </View>
-        {children}
-    </View>
-);
-
-const secWrapStyles = StyleSheet.create({
-    wrap: { marginBottom: Spacing.lg },
-    header: {
+const rowHeaderS = StyleSheet.create({
+    row: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 14,
+        marginBottom: Spacing.sm,
+        marginTop: Spacing.lg,
     },
-    title: { fontSize: FontSize.lg, fontWeight: '800', color: Colors.textPrimary },
-    action: { fontSize: FontSize.sm, color: Colors.primary, fontWeight: '700' },
+    title: {
+        fontSize: FontSize.md,
+        fontWeight: '800',
+        color: Colors.textPrimary,
+        letterSpacing: -0.3,
+    },
+    btn: { flexDirection: 'row', alignItems: 'center', gap: 1 },
+    btnText: { fontSize: FontSize.sm, color: Colors.primary, fontWeight: '700' },
 });
 
-/** Member pill card */
-const MemberPill: React.FC<{ user: RecentUser }> = ({ user }) => (
-    <View style={mpStyles.wrap}>
-        <View style={{ position: 'relative' }}>
-            <Avatar name={user.name} size={52} />
+const MemberCard: React.FC<{ user: RecentUser }> = ({ user }) => (
+    <View style={memberCardS.wrap}>
+        <View>
+            <Avatar name={user.name} size={50} />
             {user.role === 'admin' && (
-                <View style={mpStyles.adminDot}>
+                <View style={memberCardS.adminBadge}>
                     <Ionicons name="shield-checkmark" size={8} color={Colors.white} />
                 </View>
             )}
         </View>
-        <Text style={mpStyles.name} numberOfLines={1}>
+        <Text style={memberCardS.name} numberOfLines={1}>
             {user.name.split(' ')[0]}
         </Text>
-        <Text style={mpStyles.role}>{user.role}</Text>
-        <View style={mpStyles.actions}>
-            <TouchableOpacity style={[mpStyles.btn, { backgroundColor: Colors.primary }]}>
-                <Ionicons name="person-add-outline" size={12} color={Colors.white} />
+        <Text style={memberCardS.role}>{user.role}</Text>
+        <View style={memberCardS.actions}>
+            <TouchableOpacity style={[memberCardS.btn, { backgroundColor: Colors.primary }]}>
+                <Ionicons name="person-add-outline" size={11} color={Colors.white} />
             </TouchableOpacity>
-            <TouchableOpacity style={[mpStyles.btn, { backgroundColor: Colors.background }]}>
-                <Ionicons name="chatbubble-outline" size={12} color={Colors.textSecondary} />
+            <TouchableOpacity style={[memberCardS.btn, { backgroundColor: Colors.border }]}>
+                <Ionicons name="chatbubble-outline" size={11} color={Colors.textSecondary} />
             </TouchableOpacity>
         </View>
     </View>
 );
-
-const mpStyles = StyleSheet.create({
+const memberCardS = StyleSheet.create({
     wrap: {
-        width: 96,
+        width: 88,
         alignItems: 'center',
-        marginRight: 12,
+        marginRight: 10,
         backgroundColor: Colors.surface,
-        borderRadius: BorderRadius.lg,
-        padding: 14,
+        borderRadius: BorderRadius.xl,
+        padding: 12,
         ...Shadow.card,
     },
-    adminDot: {
+    adminBadge: {
         position: 'absolute',
-        bottom: 0,
-        right: 0,
+        bottom: -1,
+        right: -1,
         width: 16,
         height: 16,
         borderRadius: 8,
@@ -597,324 +587,375 @@ const mpStyles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1.5,
-        borderColor: Colors.white,
+        borderColor: Colors.surface,
     },
     name: {
-        fontSize: FontSize.sm,
+        fontSize: 12,
         fontWeight: '700',
         color: Colors.textPrimary,
         marginTop: 8,
         textAlign: 'center',
     },
     role: { fontSize: 10, color: Colors.textMuted, marginTop: 2, textTransform: 'capitalize' },
-    actions: { flexDirection: 'row', gap: 6, marginTop: 10 },
+    actions: { flexDirection: 'row', gap: 5, marginTop: 8 },
     btn: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
+        width: 26,
+        height: 26,
+        borderRadius: 13,
         alignItems: 'center',
         justifyContent: 'center',
     },
 });
 
-/** Company row */
 const CompanyRow: React.FC<{ company: RecentCompany; isLast: boolean }> = ({ company, isLast }) => {
     const verified = company.verificationStatus === 'verified';
     return (
-        <View style={[crStyles.row, !isLast && crStyles.rowBorder]}>
-            <View style={crStyles.avatar}>
-                <Text style={crStyles.initial}>{company.companyName[0].toUpperCase()}</Text>
+        <View style={[companyRowS.row, !isLast && companyRowS.border]}>
+            <View style={companyRowS.initial}>
+                <Text style={companyRowS.initialText}>{company.companyName[0].toUpperCase()}</Text>
             </View>
             <View style={{ flex: 1 }}>
-                <Text style={crStyles.name}>{company.companyName}</Text>
-                <Text style={crStyles.email} numberOfLines={1}>
+                <Text style={companyRowS.name}>{company.companyName}</Text>
+                <Text style={companyRowS.email} numberOfLines={1}>
                     {company.email}
                 </Text>
             </View>
             <View
                 style={[
-                    crStyles.badge,
-                    { backgroundColor: verified ? Colors.successLight : Colors.warningLight },
+                    companyRowS.dot,
+                    { backgroundColor: verified ? Colors.success : Colors.warning },
                 ]}
-            >
-                <Ionicons
-                    name={verified ? 'checkmark-circle' : 'time-outline'}
-                    size={12}
-                    color={verified ? Colors.success : Colors.warning}
-                />
-                <Text
-                    style={[
-                        crStyles.badgeText,
-                        { color: verified ? Colors.success : Colors.warning },
-                    ]}
-                >
-                    {company.verificationStatus}
-                </Text>
-            </View>
+            />
         </View>
     );
 };
-
-const crStyles = StyleSheet.create({
+const companyRowS = StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-    rowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.border },
-    avatar: {
+    border: { borderBottomWidth: 1, borderBottomColor: Colors.border },
+    initial: {
         width: 42,
         height: 42,
-        borderRadius: 12,
-        backgroundColor: `${Colors.primary}14`,
+        borderRadius: BorderRadius.md,
+        backgroundColor: `${Colors.primary}12`,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    initial: { fontSize: FontSize.lg, fontWeight: '900', color: Colors.primary },
-    name: { fontSize: FontSize.md, fontWeight: '700', color: Colors.textPrimary },
-    email: { fontSize: FontSize.sm, color: Colors.textMuted, marginTop: 1 },
-    badge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        borderRadius: BorderRadius.full,
-        paddingHorizontal: 9,
-        paddingVertical: 4,
-    },
-    badgeText: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
+    initialText: { fontSize: FontSize.lg, fontWeight: '900', color: Colors.primary },
+    name: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.textPrimary },
+    email: { fontSize: FontSize.xs, color: Colors.textMuted, marginTop: 1 },
+    dot: { width: 9, height: 9, borderRadius: 5 },
 });
 
-/** Overview tile */
-const OverTile: React.FC<{
+const TILE_W = (width - Spacing.lg * 3 - 10) / 3;
+const OverCard: React.FC<{
     icon: string;
     label: string;
     value: number | string;
     color: string;
     isStr?: boolean;
 }> = ({ icon, label, value, color }) => (
-    <View style={otStyles.wrap}>
-        <View style={[otStyles.icon, { backgroundColor: `${color}12` }]}>
-            <Ionicons name={icon as any} size={20} color={color} />
+    <View style={overCardS.wrap}>
+        <View style={[overCardS.topBar, { backgroundColor: color }]} />
+        <View style={overCardS.inner}>
+            <View style={[overCardS.icon, { backgroundColor: `${color}12` }]}>
+                <Ionicons name={icon as any} size={17} color={color} />
+            </View>
+            <Text style={[overCardS.val, { color }]}>{value}</Text>
+            <Text style={overCardS.label}>{label}</Text>
         </View>
-        <Text style={[otStyles.value, { color }]}>{value}</Text>
-        <Text style={otStyles.label}>{label}</Text>
     </View>
 );
-
-const otStyles = StyleSheet.create({
+const overCardS = StyleSheet.create({
     wrap: {
-        width: (width - 64) / 3,
-        backgroundColor: Colors.background,
+        width: TILE_W,
+        backgroundColor: Colors.surface,
         borderRadius: BorderRadius.lg,
-        padding: 14,
-        alignItems: 'center',
-        gap: 6,
+        overflow: 'hidden',
+        ...Shadow.card,
     },
+    topBar: { height: 3 },
+    inner: { padding: 12, alignItems: 'center', gap: 5 },
     icon: {
-        width: 42,
-        height: 42,
-        borderRadius: 13,
+        width: 38,
+        height: 38,
+        borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    value: { fontSize: FontSize.xl, fontWeight: '900' },
-    label: { fontSize: 10, color: Colors.textMuted, textAlign: 'center', fontWeight: '600' },
+    val: { fontSize: FontSize.xl, fontWeight: '900' },
+    label: { fontSize: 10, color: Colors.textMuted, fontWeight: '600', textAlign: 'center' },
 });
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── Root Styles ──────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
     root: { flex: 1, backgroundColor: Colors.background },
+
     loader: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 12,
         backgroundColor: Colors.background,
     },
-    loaderText: { fontSize: FontSize.md, color: Colors.textMuted },
+    loaderDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.primary },
+    loaderLabel: {
+        fontSize: FontSize.sm,
+        color: Colors.textMuted,
+        marginTop: 12,
+        fontWeight: '600',
+    },
 
     // ── Hero ──
     hero: {
         backgroundColor: Colors.primaryDark,
-        paddingHorizontal: 20,
-        paddingTop: 52,
-        paddingBottom: 28,
+        paddingHorizontal: Spacing.lg,
+        paddingTop: 26,
+        paddingBottom: 56,
+        overflow: 'hidden',
     },
-    heroBar: {
+    dec: { position: 'absolute', borderRadius: 999, backgroundColor: Colors.white, opacity: 0.06 },
+    dec1: { width: 220, height: 220, top: -70, right: -70 },
+    dec2: { width: 130, height: 130, top: 30, right: 80 },
+    dec3: { width: 90, height: 90, bottom: 10, left: -24 },
+
+    nav: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: 16,
+        marginBottom: Spacing.md,
     },
-
-    greetingText: { fontSize: FontSize.sm, color: `${Colors.white}75`, marginBottom: 3 },
-    heroTitle: {
+    navGreeting: {
+        fontSize: FontSize.xs,
+        color: `${Colors.white}60`,
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    navTitle: {
         fontSize: FontSize.xxl,
         fontWeight: '900',
         color: Colors.white,
         letterSpacing: -0.5,
     },
-
-    heroBarRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    iconBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: `${Colors.white}15`,
+    navRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    navBtn: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: `${Colors.white}12`,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    badge: {
+    navBadge: {
         position: 'absolute',
-        top: 2,
-        right: 2,
-        width: 17,
-        height: 17,
-        borderRadius: 9,
+        top: 5,
+        right: 5,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
         backgroundColor: Colors.accent,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1.5,
         borderColor: Colors.primaryDark,
     },
-    badgeText: { color: Colors.white, fontSize: 9, fontWeight: '900' },
-    avatarRing: { borderWidth: 2, borderColor: `${Colors.white}40`, borderRadius: 22, padding: 1 },
+    navBadgeText: { color: Colors.white, fontSize: 8, fontWeight: '900' },
+    navAvatar: { borderWidth: 2, borderColor: `${Colors.white}25`, borderRadius: 22, padding: 1 },
 
-    sessionPill: {
+    livePill: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 7,
-        backgroundColor: `${Colors.white}12`,
+        backgroundColor: `${Colors.white}10`,
         borderRadius: BorderRadius.full,
         alignSelf: 'flex-start',
         paddingHorizontal: 12,
-        paddingVertical: 6,
-        marginBottom: 18,
+        paddingVertical: 5,
+        marginBottom: Spacing.lg,
     },
-    pulse: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.success },
+    liveBlip: { width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.success },
+    liveText: { fontSize: 11, color: `${Colors.white}80`, fontWeight: '600' },
 
-    sessionLabel: { fontSize: 12, color: `${Colors.white}90`, fontWeight: '600' },
-    heroCards: { flexDirection: 'row', marginHorizontal: -4 },
+    heroEyebrow: {
+        fontSize: FontSize.sm,
+        color: `${Colors.white}55`,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+        marginBottom: 4,
+    },
+    heroNumber: {
+        fontSize: 64,
+        fontWeight: '900',
+        color: Colors.white,
+        lineHeight: 68,
+        letterSpacing: -2,
+    },
+    heroSub: {
+        fontSize: FontSize.sm,
+        color: `${Colors.white}60`,
+        marginBottom: Spacing.lg,
+        marginTop: 2,
+    },
 
-    // ── Body ──
-    body: { padding: 20 },
-
-    // Secondary strip
-    secStrip: {
+    heroStrip: {
         flexDirection: 'row',
-        alignItems: 'center',
+        backgroundColor: `${Colors.white}08`,
+        borderRadius: BorderRadius.lg,
+        paddingVertical: 14,
+    },
+    heroStripDiv: { width: 1, backgroundColor: `${Colors.white}15` },
+
+    // ── Float row ──
+    floatRow: {
+        flexDirection: 'row',
         backgroundColor: Colors.surface,
         borderRadius: BorderRadius.xl,
-        paddingVertical: 18,
-        paddingHorizontal: 8,
-        marginBottom: Spacing.lg,
+        paddingVertical: Spacing.md,
+        paddingHorizontal: Spacing.sm,
+        marginHorizontal: Spacing.lg,
+        marginTop: -28,
         ...Shadow.card,
+        shadowOpacity: 0.14,
+        elevation: 8,
     },
-    stripDiv: { width: 1, height: 40, backgroundColor: Colors.border },
+
+    // ── Body ──
+    body: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg },
 
     // Quick actions
-    quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-    quickTile: {
-        width: CARD_W,
+    quickScroll: { paddingRight: Spacing.lg, gap: 10 },
+    quickCard: {
+        width: 90,
+        backgroundColor: Colors.surface,
         borderRadius: BorderRadius.xl,
-        paddingVertical: 20,
-        paddingHorizontal: 16,
+        paddingVertical: Spacing.md,
         alignItems: 'center',
         gap: 10,
+        ...Shadow.card,
     },
-    quickCircle: {
-        width: 50,
-        height: 50,
-        borderRadius: 16,
+    quickIconWrap: {
+        width: 52,
+        height: 52,
+        borderRadius: BorderRadius.lg,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    quickLabel: { fontSize: FontSize.sm, fontWeight: '700', textAlign: 'center' },
+    quickCardLabel: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: Colors.textSecondary,
+        textAlign: 'center',
+        lineHeight: 15,
+    },
 
-    // Leads banner
-    leadsBanner: {
+    // Leads card
+    leadsCard: {
         backgroundColor: Colors.surface,
         borderRadius: BorderRadius.xl,
-        padding: 22,
         flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: Spacing.lg,
-        borderLeftWidth: 4,
-        borderLeftColor: Colors.accent,
+        overflow: 'hidden',
+        marginTop: Spacing.lg,
         ...Shadow.card,
     },
-    leadsBannerLeft: { flex: 1, gap: 4 },
-    leadsBadge: {
+    leadsAccentBar: { width: 4 },
+    leadsInner: { flex: 1, padding: Spacing.md },
+    leadsTop: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: Spacing.md,
+    },
+    leadsTag: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 5,
-        backgroundColor: `${Colors.accent}14`,
-        alignSelf: 'flex-start',
+        gap: 4,
+        backgroundColor: `${Colors.accent}12`,
         borderRadius: BorderRadius.full,
+        alignSelf: 'flex-start',
         paddingHorizontal: 10,
         paddingVertical: 4,
-        marginBottom: 4,
+        marginBottom: 6,
     },
-    leadsBadgeText: { fontSize: 10, fontWeight: '800', color: Colors.accent, letterSpacing: 0.5 },
-    leadsBannerNum: {
-        fontSize: FontSize.display,
+    leadsTagText: { fontSize: 10, fontWeight: '800', color: Colors.accent, letterSpacing: 0.6 },
+    leadsNum: {
+        fontSize: 48,
         fontWeight: '900',
         color: Colors.textPrimary,
-        lineHeight: 42,
+        lineHeight: 52,
+        letterSpacing: -1.5,
     },
-    leadsBannerLabel: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.textPrimary },
-    leadsBannerSub: { fontSize: FontSize.sm, color: Colors.textMuted },
+    leadsDesc: { fontSize: FontSize.sm, color: Colors.textMuted },
+    leadsCircle: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: `${Colors.accent}10`,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    leadsFooter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.background,
+        borderRadius: BorderRadius.lg,
+        padding: 12,
+        gap: 12,
+    },
+    leadsFooterStat: { flex: 1 },
+    leadsFooterVal: { fontSize: FontSize.lg, fontWeight: '900', color: Colors.textPrimary },
+    leadsFooterLabel: { fontSize: 10, color: Colors.textMuted, fontWeight: '600', marginTop: 1 },
+    leadsFooterDivider: { width: 1, height: 32, backgroundColor: Colors.border },
     leadsBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: 5,
         backgroundColor: Colors.accent,
         borderRadius: BorderRadius.full,
-        alignSelf: 'flex-start',
-        paddingHorizontal: 18,
-        paddingVertical: 10,
-        marginTop: 14,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        ...Shadow.button,
     },
-    leadsBtnText: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.white },
-    leadsBannerRight: { width: 80, alignItems: 'center', justifyContent: 'center' },
+    leadsBtnText: { fontSize: 12, fontWeight: '700', color: Colors.white },
 
-    // Overview grid
+    // Companies
+    companiesCard: {
+        backgroundColor: Colors.surface,
+        borderRadius: BorderRadius.xl,
+        paddingHorizontal: Spacing.md,
+        ...Shadow.card,
+    },
+
+    // Overview
     overGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
 
-    // Company card wrapper
-    companyCard: {
-        backgroundColor: Colors.surface,
-        borderRadius: BorderRadius.xl,
-        paddingHorizontal: 16,
-        ...Shadow.card,
-    },
-
     // Community
-    community: {
+    communityCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 16,
-        backgroundColor: Colors.surface,
+        backgroundColor: Colors.primaryDark,
         borderRadius: BorderRadius.xl,
-        padding: 18,
-        borderWidth: 1.5,
-        borderColor: `${Colors.primary}20`,
-        ...Shadow.card,
+        padding: Spacing.md,
+        marginTop: Spacing.lg,
+        overflow: 'hidden',
+        ...Shadow.button,
     },
-    communityIcon: {
-        width: 52,
-        height: 52,
-        borderRadius: 16,
-        backgroundColor: `${Colors.primary}10`,
+    communityLeft: { flex: 1, gap: 3 },
+    communityEye: { fontSize: 10, fontWeight: '800', color: `${Colors.white}45`, letterSpacing: 1 },
+    communityTitle: {
+        fontSize: FontSize.xl,
+        fontWeight: '900',
+        color: Colors.white,
+        letterSpacing: -0.5,
+    },
+    communitySub: { fontSize: FontSize.sm, color: `${Colors.white}55` },
+    communityGlobe: { position: 'absolute', right: -8, bottom: -24 },
+    communityArrowBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: Colors.accent,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    communityTitle: { fontSize: FontSize.md, fontWeight: '800', color: Colors.textPrimary },
-    communitySub: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 3 },
-    communityArrow: {
-        width: 34,
-        height: 34,
-        borderRadius: 10,
-        backgroundColor: `${Colors.primary}10`,
-        alignItems: 'center',
-        justifyContent: 'center',
+        ...Shadow.button,
     },
 });
 

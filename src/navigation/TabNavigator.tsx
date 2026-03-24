@@ -1,5 +1,5 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, useColorScheme } from 'react-native';
 import EventsScreen from '../screens/tabs/EventsScreen';
 import HomeScreen from '../screens//tabs/HomeScreen';
 import LeadsScreen from '../screens/tabs/LeadsScreen';
@@ -22,35 +22,39 @@ const TAB_ICONS: Record<string, { active: string; inactive: string }> = {
     Profile: { active: 'person', inactive: 'person-outline' },
 };
 
-export const MainTabs = () => (
-    <Tab.Navigator
-        screenOptions={({ route }) => ({
-            headerShown: false,
-            tabBarStyle: styles.tabBar,
-            tabBarActiveTintColor: Colors.tabBarActive,
-            tabBarInactiveTintColor: Colors.tabBarInactive,
-            tabBarLabelStyle: styles.tabBarLabel,
-            tabBarIcon: ({ focused, color }) => {
-                const icon = focused
-                    ? TAB_ICONS[route.name].active
-                    : TAB_ICONS[route.name].inactive;
+export const MainTabs = () => {
+    const isDarkMode = useColorScheme() === 'dark';
 
-                return (
-                    <View style={[styles.tabIconWrapper, focused && styles.tabIconActive]}>
-                        <Iconions name={icon} size={22} color={color} />
-                    </View>
-                );
-            },
-        })}
-    >
-        <Tab.Screen name="Home" component={HomeScreen} />
-        <Tab.Screen name="Network" component={ComingSoon} />
-        <Tab.Screen name="Leads" component={LeadsScreen} />
-        <Tab.Screen name="Events" component={EventsScreen} />
-        <Tab.Screen name="Messages" component={ComingSoon} />
-        <Tab.Screen name="Profile" component={ProfileScreen} />
-    </Tab.Navigator>
-);
+    return (
+        <Tab.Navigator
+            screenOptions={({ route }) => ({
+                headerShown: false,
+                tabBarStyle: styles.tabBar,
+                tabBarActiveTintColor: Colors.tabBarActive,
+                tabBarInactiveTintColor: Colors.tabBarInactive,
+                tabBarLabelStyle: styles.tabBarLabel,
+                tabBarIcon: ({ focused, color }) => {
+                    const icon = focused
+                        ? TAB_ICONS[route.name].active
+                        : TAB_ICONS[route.name].inactive;
+
+                    return (
+                        <View style={[styles.tabIconWrapper, focused && styles.tabIconActive]}>
+                            <Iconions name={icon} size={22} color={color} />
+                        </View>
+                    );
+                },
+            })}
+        >
+            <Tab.Screen name="Home" component={HomeScreen} />
+            <Tab.Screen name="Network" component={ComingSoon} />
+            <Tab.Screen name="Leads" component={LeadsScreen} />
+            <Tab.Screen name="Events" component={EventsScreen} />
+            <Tab.Screen name="Messages" component={ComingSoon} />
+            <Tab.Screen name="Profile" component={ProfileScreen} />
+        </Tab.Navigator>
+    );
+};
 
 const styles = StyleSheet.create({
     tabBar: {

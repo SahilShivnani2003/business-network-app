@@ -27,6 +27,7 @@ import {
 import { useAlert } from '../../context/AlertContext';
 import { useAuthStore } from '../../store/authStore';
 import { companyAPI } from '../../service/apis/companyService';
+import { Loader } from '../../components/ui/Loader';
 
 const { width } = Dimensions.get('window');
 
@@ -34,6 +35,7 @@ type LoginProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
 type LoginMethod = 'otp' | 'email';
 
 const LoginScreen = ({ navigation }: LoginProps) => {
+    const [loading, setLoading] = useState<boolean>(false);
     const [method, setMethod] = useState<LoginMethod>('email');
     const alert = useAlert();
     const { login } = useAuthStore();
@@ -120,6 +122,8 @@ const LoginScreen = ({ navigation }: LoginProps) => {
         setPasswordTouched(true);
         if (emailError || passError) return;
         try {
+            setLoading(true);
+            debugger
             const response = await companyAPI.login({ email, password });
             if (response.data?.success) {
                 alert.success('Login Successful', response.data?.message || 'Welcome back!');
@@ -128,6 +132,8 @@ const LoginScreen = ({ navigation }: LoginProps) => {
             }
         } catch (error: any) {
             alert.error('Login Failed', error?.message || 'Something went wrong');
+        }finally{
+            setLoading(false);
         }
     };
 
@@ -202,10 +208,7 @@ const LoginScreen = ({ navigation }: LoginProps) => {
                         >
                             <Text style={styles.tabEmoji}>📱</Text>
                             <Text
-                                style={[
-                                    styles.tabLabel,
-                                    method === 'otp' && styles.tabLabelActive,
-                                ]}
+                                style={[styles.tabLabel, method === 'otp' && styles.tabLabelActive]}
                             >
                                 Mobile OTP
                             </Text>
@@ -238,7 +241,10 @@ const LoginScreen = ({ navigation }: LoginProps) => {
                                     label="Mobile Number"
                                     icon="call-outline"
                                     value={phone}
-                                    onChangeText={v => { setPhone(v); setPhoneTouched(false); }}
+                                    onChangeText={v => {
+                                        setPhone(v);
+                                        setPhoneTouched(false);
+                                    }}
                                     placeholder="98765 43210"
                                     keyboardType="phone-pad"
                                     prefix="+91"
@@ -264,14 +270,19 @@ const LoginScreen = ({ navigation }: LoginProps) => {
                                             </View>
                                             <View style={{ flex: 1 }}>
                                                 <Text style={styles.otpBannerTitle}>OTP Sent!</Text>
-                                                <Text style={styles.otpBannerSub}>Sent to +91 {phone}</Text>
+                                                <Text style={styles.otpBannerSub}>
+                                                    Sent to +91 {phone}
+                                                </Text>
                                             </View>
                                         </View>
                                         <InputField
                                             label="Enter OTP"
                                             icon="shield-checkmark-outline"
                                             value={otp}
-                                            onChangeText={v => { setOtp(v); setOtpTouched(false); }}
+                                            onChangeText={v => {
+                                                setOtp(v);
+                                                setOtpTouched(false);
+                                            }}
                                             placeholder="• • • • • •"
                                             keyboardType="number-pad"
                                             maxLength={6}
@@ -289,9 +300,15 @@ const LoginScreen = ({ navigation }: LoginProps) => {
                                         />
                                         <TouchableOpacity
                                             style={styles.resendBtn}
-                                            onPress={() => { setOtp(''); setOtpSent(false); setOtpTouched(false); }}
+                                            onPress={() => {
+                                                setOtp('');
+                                                setOtpSent(false);
+                                                setOtpTouched(false);
+                                            }}
                                         >
-                                            <Text style={styles.resendText}>Didn't receive? Resend OTP</Text>
+                                            <Text style={styles.resendText}>
+                                                Didn't receive? Resend OTP
+                                            </Text>
                                         </TouchableOpacity>
                                     </>
                                 )}
@@ -302,7 +319,10 @@ const LoginScreen = ({ navigation }: LoginProps) => {
                                     label="Email Address"
                                     icon="mail-outline"
                                     value={email}
-                                    onChangeText={v => { setEmail(v); setEmailTouched(false); }}
+                                    onChangeText={v => {
+                                        setEmail(v);
+                                        setEmailTouched(false);
+                                    }}
                                     placeholder="you@company.com"
                                     keyboardType="email-address"
                                     required
@@ -314,10 +334,15 @@ const LoginScreen = ({ navigation }: LoginProps) => {
                                         label="Password"
                                         icon="lock-closed-outline"
                                         value={password}
-                                        onChangeText={v => { setPassword(v); setPasswordTouched(false); }}
+                                        onChangeText={v => {
+                                            setPassword(v);
+                                            setPasswordTouched(false);
+                                        }}
                                         placeholder="Min. 8 characters"
                                         secureTextEntry={!showPassword}
-                                        trailingIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                                        trailingIcon={
+                                            showPassword ? 'eye-off-outline' : 'eye-outline'
+                                        }
                                         onTrailingPress={() => setShowPassword(p => !p)}
                                         required
                                         error={passError}
@@ -333,6 +358,8 @@ const LoginScreen = ({ navigation }: LoginProps) => {
                                     variant="primary"
                                     fullWidth
                                     size="lg"
+                                    loading={loading}
+                                    disabled={loading}
                                 />
                             </>
                         )}
@@ -347,8 +374,18 @@ const LoginScreen = ({ navigation }: LoginProps) => {
 
                     {/* Social */}
                     <View style={styles.socialRow}>
-                        <SocialButton label="Google" icon="G" color="#EA4335" onPress={handleSocialLogin} />
-                        <SocialButton label="LinkedIn" icon="in" color="#0A66C2" onPress={handleSocialLogin} />
+                        <SocialButton
+                            label="Google"
+                            icon="G"
+                            color="#EA4335"
+                            onPress={handleSocialLogin}
+                        />
+                        <SocialButton
+                            label="LinkedIn"
+                            icon="in"
+                            color="#0A66C2"
+                            onPress={handleSocialLogin}
+                        />
                     </View>
                 </Animated.View>
 
