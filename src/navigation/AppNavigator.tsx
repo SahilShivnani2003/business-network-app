@@ -18,14 +18,21 @@ import { WhatsAppGroupsScreen } from '../screens/WhatsAppGroupsScreen';
 import { RootStackParamList } from '../types/rootStackParamList';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AlertProvider } from '../context/AlertContext';
+import { useColorScheme } from 'react-native';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
+    const isDarkMode = useColorScheme() === 'dark';
     return (
         <AlertProvider>
             <NavigationContainer>
-                <Stack.Navigator screenOptions={{ headerShown: false }}>
+                <Stack.Navigator
+                    screenOptions={{
+                        headerShown: false,
+                        statusBarStyle: isDarkMode ? 'light' : 'dark',
+                    }}
+                >
                     <Stack.Screen name="Splash" component={SplashScreen} />
                     <Stack.Screen name="Onboarding" component={OnboardingScreen} />
                     <Stack.Screen name="Login" component={LoginScreen} />
